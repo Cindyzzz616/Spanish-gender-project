@@ -1,0 +1,884 @@
+# IDEA if we want to squeeze several bins into one bin, we can compute the empirical logit (or something like it) because it's like taking multiple samples per bin (as in Ito), and seeing how many samples are fixations to AOI and how many are not. I wonder if we can also have non-integer samples - because that'd allow us to squeeze and stretch our integer samples
+
+### Data preparation
+
+```{r eval=T, echo=T, message=F}
+rm(list = ls()) # Clear the workspace
+options(scipen = 999) # Turn off scientific notation
+```
+
+##### Packages
+
+```{r eval=T, message=F}
+require(Rmisc)
+require(tidyverse)
+require(ggplot2)
+require(boot)
+require(progress)
+require(dplyr)
+require(lme4)
+```
+
+##### Package versions
+
+```{r echo=F}
+installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
+```
+
+##### Read the time-course data
+
+```{r eval=T, message=F}
+fix.dat = read_delim("/Users/cindyzhang/Desktop/Spanish Gender Project/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
+# all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
+```
+
+##### Remove rows where the time bins are not 10ms
+```{r eval=T, message=F}
+fix.dat <- fix.dat %>% filter(Bin_duration == 10) # FIXME is this necessary?
+```
+
+##### Add AreaFixated column
+
+``` {r eval=T, message=F}
+fix.dat <- fix.dat %>%
+  mutate(AreaFixated = case_when(
+    Competitor == 1 ~ "Competitor",
+    Distractor == 1 ~ "Distractor",
+    Target == 1 ~ "Target"
+  ))
+```
+
+##### Reduplicate the dataset and add `Condition` column
+- feels really wrong to duplicate the data three times
+
+# ``` {r eval=T, message=F}
+# fix.dat <- bind_rows(
+#   fix.dat %>% mutate(Condition = "Target"),
+#   fix.dat %>% mutate(Condition = "Competitor"),
+#   fix.dat %>% mutate(Condition = "Distractor")
+# )
+# ```
+
+
+##### Add FixP column to be consistent with the Ito data
+- don't think we need that anymore since we did it with fix.long instead
+
+``` {r eval=F, message=F}
+fix.dat <- fix.dat %>%
+  mutate(FixP = case_when(
+    (Condition == "Target") & (Target == 1) ~ 1.00,
+    (Condition == "Competitor") & (Competitor == 1) ~ 1.00,
+    (Condition == "Distractor") & (Distractor == 1) ~ 1.00,
+    TRUE ~ 0.00
+  ))
+```
+
+##### Inspect the raw data
+
+```{r eval=T, message=F}
+summary(fix.dat)
+head(fix.dat)
+```
+
+##### Select `Target` and `NonTarget` AreaFixated to do divergence between Target and the two other AreaFixated (Competitor and Distractor) - this is like Target and Unrelated in Ito
+- they used to select for conditions, now we select for AreaFixated (?)
+- no need to drop the `Trackloss` AreaFixated because they don't exist
+# ```{r eval=T, echo=T, message=F}
+# fix.dat = fix.dat %>% filter(AreaFixated %in% c('Target','NonTarget')) %>% droplevels()
+# ```
+
+##### Version that selects all 3 AreaFixated - shouldn't need it because we only create the 2-var version later
+```{r eval=F, echo=T, message=F}
+fix.dat = fix.dat %>% filter(AreaFixated %in% c('Target','Competitor', 'Distractor')) %>% droplevels()
+```
+
+##### Change `Participant`, `TOI`, `AreaFixated` and `SpeakerType` to factor (and `Condition`)
+- FIXME they also had `Condition` as a factor - should be AreaFixated here - our `Condition` is a different concept - removed for now
+
+```{r eval=T, echo=T, message=F}
+fix.dat = fix.dat %>% mutate_at(vars(Participant, TOI, AreaFixated, SpeakerType), as.factor)
+```
+
+##### Look at the data after the selection and factoring
+
+```{r eval=T, echo=T, message=F}
+summary(fix.dat)
+```
+
+##### Compute the mean, SD, SE and CI for `FixP` for each time bin, AOI and SpeakerType
+- I think `FixP` is equivalent to the binomial encoding columns we have - for example the AreaFixated is Target, and there's a 1 under the column Target - then the FixP is just 1 (bc we don't have decimals)
+- ohhh wait there's a difference between the AreaFixated we're concerned about, and the AreaFixated the participant is actually looking at - the latter would be our "AOI"
+
+- for each timebin (across all participants and trials), we want an average FixP for each AreaFixated
+
+``` {r eval=T, echo=T, message=F}
+# reshape to long format
+fix.long <- fix.dat %>%
+  pivot_longer(
+    cols = c(Target, Competitor, Distractor),
+    names_to = "AOI",
+    values_to = "FixP"
+  )
+fix.long = fix.long %>% mutate_at(vars(AOI), as.factor)
+```
+
+```{r eval=T, echo=T, message=F}
+fix.means = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner','TOI'), na.rm=T)
+head(fix.means)
+```
+
+##### Create a dataset with only definite determiner trials
+
+```{r eval=T, echo=T, message=F}
+fix.long.def = fix.long %>% filter(Determiner=="Definite")
+```
+
+##### Compute Mean, SD, SE, CI
+
+```{r eval=T, echo=T, message=F}
+fix.means.def = Rmisc::summarySE(fix.long.def, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI'), na.rm=T)
+head(fix.means.def)
+```
+
+##### Create a dataset with only possessive determiner trials
+
+```{r eval=T, echo=T, message=F}
+fix.long.pos = fix.long %>% filter(Determiner=="Possessive")
+```
+
+##### Compute Mean, SD, SE, CI
+
+```{r eval=T, echo=T, message=F}
+fix.means.pos = Rmisc::summarySE(fix.long.pos, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI'), na.rm=T)
+head(fix.means.pos)
+```
+
+##### Plot mean (with SE) for each AOI for each group
+
+Save the plot as `fix.plot` to add the results later on the plot
+
+###### Plot with definite determiner trials
+
+```{r eval=T, echo=T, message=F, fig.width = 12}
+fix.plot.def = ggplot() + 
+  facet_wrap(~SpeakerType, ncol=2, labeller = as_labeller(c("1" = "ASI", "2" = "HSS"))) + theme_bw() + 
+  geom_line(data=fix.means.def,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means.def,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_fill_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.def
+```
+
+###### Plot with posessive determiner trials
+
+```{r eval=T, echo=T, message=F, fig.width = 12}
+fix.plot.pos = ggplot() + 
+  facet_wrap(~SpeakerType, ncol=2, labeller = as_labeller(c("1" = "ASI", "2" = "HSS"))) + theme_bw() + 
+  geom_line(data=fix.means.pos,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means.pos,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_fill_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.pos
+```
+
+```{r eval=T, echo=T, message=F, fig.width = 12}
+fix.plot = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType, ncol=2,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              )
+            )
+             ) + theme_bw() + 
+  geom_line(data=fix.means,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_fill_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot
+```
+##### Plotting by trials
+``` {r}
+fix.means.sub <- fix.means %>%
+  filter(TOI %in% c("Trial18-def-toro_0", "Trial12-pos-raya_0", "Trial10-pos-oso_0"))
+```
+
+```{r eval=T, echo=T, message=F, fig.width = 12}
+fix.plot.TOI = ggplot() + 
+  facet_wrap(~TOI + SpeakerType,
+             ncol=3,
+             labeller = labeller(
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              )
+            )
+             ) + theme_bw() + 
+  geom_line(data=fix.means.sub,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  #geom_ribbon(data=fix.means.sub,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_fill_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","solid", "solid")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.TOI
+```
+
+##### Save the plot
+
+``` {r eval=T, message=F}
+ggsave("plots/fixation_plot.png", width = 20, height = 15, dpi = 300)
+```
+
+``` {r eval=T, message=F}
+ggsave("plots/fixation_plot_by_TOI.png", width = 20, height = 15, dpi = 300)
+```
+
+##### Compute the empirical logit (cf. Barr, 2008, JML)
+- do we need to do this? Crystal said no in the last meeting
+- Also we don't have the columns Count, allSample, etc.
+
+The formula to compute the empirical logit is: `log( (Y+.5) / (N-Y+.5) )` where `Y` is the total number of samples that fall in the critical interest area, and `N` is the total number of samples for the current bin.
+
+For this data, we will exclude blink samples and off-screen samples (i.e., `N = allSample - BlinkCount - OffScreenCount`).
+
+```{r eval=F, message=F}
+fix.dat = fix.dat %>% mutate(elogFix = log((Count+.5)/(allSample-BlinkCount-OffScreenCount-Count+.5)))
+
+head(fix.dat)
+```
+
+
+### DPA
+
+Here we will run a by-subject analysis testing the divergence between the target and unrelated conditions.
+
+##### Create a by-subject summary and a stratification variable
+
+We will select the time window for the analysis. The time window should be large enough to capture a divergence point, but it should not include time bins with very few observations. It may be impossible to perform a statistical analysis (e.g., t-test) on such data. We will choose the time from -800 ms relative to the target word onset.
+
+Reminder: Data resampling will be performed within this variable. In this case, data will be resampled within subject, condition and time. This variable should be treated as a factor.
+^^^ original description
+
+- not sure if it should be AreaFixated or AOI here
+
+
+##### Combine Competitor and Distractor
+
+``` {r eval=T, message=F}
+fix.twovar <- fix.dat %>%
+  mutate(NonTarget = Competitor + Distractor) %>%
+  select(-Competitor, -Distractor)
+
+fix.twovar <- fix.twovar %>%
+  mutate(AreaFixated = ifelse(AreaFixated == "Target", "Target", "NonTarget"))
+
+fix.twovar$AreaFixated <- as.factor(fix.twovar$AreaFixated)
+```
+
+##### Pivot binomially encoded columns
+
+``` {r eval=T, message=F}
+fix.twovar <- fix.twovar %>%
+  pivot_longer(
+    cols = c(Target, NonTarget),
+    names_to = "AOI",
+    values_to = "FixP"
+  )
+
+fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
+
+summary(fix.twovar)
+head(fix.twovar)
+```
+
+##### Compute mean fixation proportions for the two-variable version
+
+```{r eval=T, echo=T, message=F}
+fix.means.twovar = Rmisc::summarySE(fix.twovar, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner'), na.rm=T)
+summary(fix.means.twovar)
+head(fix.means.twovar)
+
+# factorize SpeakerType - should I?
+# fix.means.twovars$SpeakerType <- as.factor(fix.means.twovars$SpeakerType)
+```
+
+##### Create FixP vs. Time plot with Target and NonTarget
+
+```{r eval=F, echo=T, message=F, fig.width = 12}
+fix.plot.twovar = ggplot() + 
+  facet_wrap(~SpeakerType, ncol=2, labeller = as_labeller(c("1" = "ASI", "2" = "HSS"))) + theme_bw() + 
+  geom_line(data=fix.means.twovar,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means.twovar,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","gray")) +
+  scale_fill_manual('AOI', values=c("pink","gray")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.twovar
+```
+
+##### Twovar, four graphs
+
+```{r eval=T, echo=T, message=F, fig.width = 12}
+fix.plot.twovar = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType, ncol=2,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              )
+            )
+             ) + theme_bw() + 
+  geom_line(data=fix.means.twovar,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means.twovar,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("mediumpurple1","gold")) +
+  scale_fill_manual('AOI', values=c("mediumpurple1","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.twovar
+```
+
+##### Save the plot
+``` {r eval=T, message=F}
+ggsave("plots/fixation_plot_twovar.png", width = 20, height = 15, dpi = 300)
+```
+
+#### Select time window and create stratification variables
+- double check: AreaFixated or AOI?
+```{r eval=T, echo=T, message=F}
+div.dat = fix.twovar %>%  
+  filter(1400>=TimeMS_adjusted & TimeMS_adjusted>=-300) %>% 
+  dplyr::mutate(StrataVars=paste(Participant, AOI, TimeMS_adjusted, sep='')) %>% 
+  mutate_at(vars(SpeakerType, StrataVars),as.factor) %>% 
+  droplevels()
+
+summary(div.dat)
+head(div.dat)
+```
+
+##### Chatgpt trying to fix it by summarizing the divergence dataset first
+``` {R}
+div.summary <- div.dat %>%
+  group_by(Participant, TimeMS_adjusted, AOI, SpeakerType) %>%
+  summarise(FixM = mean(FixP, na.rm = TRUE), .groups = "drop") %>%
+  mutate(StrataVars = paste(Participant, AOI, TimeMS_adjusted, sep = "_"))
+```
+
+##### Define a bootstrap function to compute a divergence point for the target vs. unrelated conditions
+
+##### This worked!!!
+```{r eval=T, echo=T, message=F}
+boot_L1L2 = function(original_data, resample_indices){
+  # FIXME dat_resample = original_data[resample_indices, ] # resample the data
+  dat = original_data[resample_indices, ]
+  
+  progress$tick() # update progress bar
+  
+  # dat = dat_resample %>% 
+  #   # FIXME not sure if it should be AreaFixated or AOI
+  #   group_by(AOI, TimeMS_adjusted, SpeakerType) %>%
+  #   # FIXME changed elogFix to just FixP
+  #   dplyr::summarise(FixM = mean(FixP, na.rm=T)) # average fixation proportion by participant, AreaFixated and TimeMS_adjusted, keeping group
+  #   # dplyr::summarise(elogFixM = mean(elogFix, na.rm=T)) 
+  # head(dat)
+  
+  # # Chatgpt fix
+  # safe_t = function(df) {
+  # if (length(unique(df$AOI)) < 2) return(NA_real_)
+  # tryCatch(t.test(FixM ~ AOI, data = df)$statistic[[1]], error = function(e) NA_real_)
+  # }
+  # 
+  # test_g1 = dat %>%
+  #   filter(SpeakerType == 1) %>%
+  #   group_by(TimeMS_adjusted) %>%
+  #   summarise(t = safe_t(cur_data()), .groups = "drop")
+  # 
+  # test_g2 = dat %>%
+  #   filter(SpeakerType == 2) %>%
+  #   group_by(TimeMS_adjusted) %>%
+  #   summarise(t = safe_t(cur_data()), .groups = "drop")
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"]) # FIXME double check AreaFixated or AOI
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"]) # FIXME double check AreaFixated or AOI
+
+  # return a TRUE/FALSE vector of significant positive t-scores
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # # Chatgpt
+  # if (length(t_g1) >= 20 && length(t_g2) >= 20) {
+  # onset_g1 = rep(FALSE, length(t_g1) - 19)
+  # onset_g2 = rep(FALSE, length(t_g2) - 19)
+  # 
+  # for (i in 1:(length(t_g1) - 19)) {
+  #   onset_g1[i] = all(t_g1[i:(i + 19)], na.rm = TRUE)
+  #   onset_g2[i] = all(t_g2[i:(i + 19)], na.rm = TRUE)
+  # }
+  # 
+  # i1 = which(onset_g1)[1]
+  # i2 = which(onset_g2)[1]
+  # 
+  # if (is.na(i1) || is.na(i2)) {
+  #   return(c(NA, NA, NA))
+  # }
+  # 
+  #   delta = i2 - i1
+  #   return(c(delta, i1, i2))
+  # } else {
+  #   return(c(NA, NA, NA))  # Not enough time bins to check for 20 in a row
+  # }
+  
+  # find the index of the earliest run of 4 sequential TRUEs
+  # FIXME how many sequential TRUEs do we want?
+  for (i in 1:(length(t_g2)-Nbins)) {
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
+  # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
+  c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
+    which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
+    which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
+}
+
+```
+
+##### attempted chatgpt fix
+``` {r eval=T, echo=T, message=F}
+boot_L1L2 = function(original_data, resample_indices) {
+  dat_resample = original_data[resample_indices, ]
+  progress$tick()
+
+  # Chatgpt fix
+  safe_t = function(df) {
+    if (length(unique(df$AOI)) < 2) return(NA_real_)
+    if (length(df$FixP) < 4 || all(df$FixP == df$FixP[1])) return(NA_real_)
+    tryCatch(t.test(FixP ~ AOI, data = df)$statistic[[1]], error = function(e) NA_real_)
+  }
+
+  safe_t = function(df) {
+  if (length(unique(df$AOI)) < 2) return(NA_real_)
+  tryCatch(t.test(FixM ~ AOI, data = df)$statistic[[1]], error = function(e) NA_real_)
+  }
+
+  test_g1 = dat %>%
+    filter(SpeakerType == 1) %>%
+    group_by(TimeMS_adjusted) %>%
+    summarise(t = safe_t(cur_data()), .groups = "drop")
+  
+  test_g2 = dat %>%
+    filter(SpeakerType == 2) %>%
+    group_by(TimeMS_adjusted) %>%
+    summarise(t = safe_t(cur_data()), .groups = "drop")
+
+  #FIXME Run per group
+  # test_g1 = dat_resample %>%
+  #   filter(SpeakerType == 1) %>%
+  #   group_by(TimeMS_adjusted) %>%
+  #   summarise(t = safe_t(cur_data()), .groups = "drop")
+  # 
+  # test_g2 = dat_resample %>%
+  #   filter(SpeakerType == 2) %>%
+  #   group_by(TimeMS_adjusted) %>%
+  #   summarise(t = safe_t(cur_data()), .groups = "drop")
+
+  # Create logical vectors
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+
+  # Use run of 4 bins
+  onset_g1 = rep(FALSE, length(t_g1) - 3)
+  onset_g2 = rep(FALSE, length(t_g2) - 3)
+
+  #FIXME for (i in 1:(length(t_g1) - 3)) {
+  #   onset_g1[i] = all(t_g1[i:(i + 3)])
+  #   onset_g2[i] = all(t_g2[i:(i + 3)])
+  # }
+
+  times = sort(unique(dat_resample$TimeMS_adjusted))
+  
+  # Defensive check
+  if (all(!onset_g1) || all(!onset_g2)) {
+    return(c(NA, NA, NA))
+  }
+
+  t1 = times[which(onset_g1)[1]]
+  t2 = times[which(onset_g2)[1]]
+  delta_ms = t2 - t1
+
+  c(delta_ms, t1, t2)
+}
+```
+
+##### Another chatgpt attempt
+``` {R}
+div.summary <- fix.twovar %>%
+  group_by(Participant, TimeMS_adjusted, AOI, SpeakerType) %>%
+  summarise(FixM = mean(FixP, na.rm = TRUE), .groups = "drop") %>%
+  mutate(StrataVars = paste(Participant, AOI, TimeMS_adjusted, sep = "_"))
+
+
+
+boot_L1L2 <- function(data, indices) {
+  dat <- data[indices, ]
+  progress$tick()
+
+  # safe t-test function
+  safe_t = function(df) {
+    if (length(unique(df$AOI)) < 2 || all(df$FixM == df$FixM[1])) return(NA_real_)
+    tryCatch(t.test(FixM ~ AOI, data = df)$statistic[[1]], error = function(e) NA_real_)
+  }
+
+  # get t-values for each group and time bin
+  test_g1 <- dat %>%
+    filter(SpeakerType == 1) %>%
+    group_by(TimeMS_adjusted) %>%
+    summarise(t = safe_t(cur_data()), .groups = "drop")
+
+  test_g2 <- dat %>%
+    filter(SpeakerType == 2) %>%
+    group_by(TimeMS_adjusted) %>%
+    summarise(t = safe_t(cur_data()), .groups = "drop")
+
+  # early exit if not enough bins
+  if (nrow(test_g1) < 4 || nrow(test_g2) < 4) return(c(NA, NA, NA))
+
+  t_g1 <- test_g1$t > 1.96
+  t_g2 <- test_g2$t > 1.96
+
+  # divergence detection
+  runlen <- 4
+  detect_onset <- function(t_vec) {
+    for (i in 1:(length(t_vec) - runlen + 1)) {
+      if (all(t_vec[i:(i + runlen - 1)], na.rm = TRUE)) return(i)
+    }
+    return(NA_integer_)
+  }
+
+  i1 <- detect_onset(t_g1)
+  i2 <- detect_onset(t_g2)
+
+  if (is.na(i1) || is.na(i2)) return(c(NA, NA, NA))
+
+  delta <- i2 - i1
+  return(c(delta, i1, i2))
+}
+```
+
+##### bootstrap function with glm (generalized linear model)
+
+```{r eval=T, echo=T, message=F}
+boot_L1L2_glm = function(original_data, resample_indices){
+  # FIXME dat_resample = original_data[resample_indices, ] # resample the data
+  dat = original_data[resample_indices, ]
+  
+  progress$tick() # update progress bar
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(glm(FixP ~ AOI, family = binomial))$coefficients["AOITarget", "z value"]) # FIXME double check AreaFixated or AOI
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(glm(FixP ~ AOI, family = binomial))$coefficients["AOITarget", "z value"]) # FIXME double check AreaFixated or AOI
+
+  # return a TRUE/FALSE vector of significant positive t-scores
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of 4 sequential TRUEs
+  # FIXME how many sequential TRUEs do we want?
+  for (i in 1:(length(t_g2)-Nbins)) {
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
+  # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
+  c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
+    which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
+    which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
+}
+
+```
+
+Number of consecutive statistically significant time bins required to establish divergence
+``` {r}
+Nbins = 20
+```
+
+Number of iterations
+
+```{r eval=T, echo=T, message=F}
+# FIXME don't forget to adjust Niter
+Niter = 100L
+```
+
+
+##### Run the bootstrap
+
+```{r eval=T, echo=T, message=F}
+
+# div.dat$FixP <- as.numeric(div.dat$FixP)
+
+progress = progress::progress_bar$new(total=Niter+1, clear=F, format="[:bar] :percent :eta") # initialise the progress bar
+
+bootres_L1L2 = boot::boot(
+  data = div.dat,  # data set to bootstrap       
+  statistic = boot_L1L2,  # bootstrap function      
+  strata = div.dat$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations          
+```
+
+
+##### Run the glm bootstrap
+
+```{r eval=T, echo=T, message=F}
+
+# div.dat$FixP <- as.numeric(div.dat$FixP)
+
+progress = progress::progress_bar$new(total=Niter+1, clear=F, format="[:bar] :percent :eta") # initialise the progress bar
+
+bootres_L1L2_glm = boot::boot(
+  data = div.dat,  # data set to bootstrap       
+  statistic = boot_L1L2_glm,  # bootstrap function      
+  strata = div.dat$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations          
+```
+
+
+We are saving the results using the `save` function below. If we already have the results file, we can load it using the `load` function.
+
+```{r eval=T, echo=T, message=F}
+# FIXME add different lines for loading results from different bootstraps
+load("DPA_results.subj.rds")
+```
+
+Save the results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2, file="DPA_results.lmer.rds")
+```
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2, file="DPA_results.glm.rds")
+```
+
+Output
+
+```{r eval=T, echo=T, message=F}
+bootres_L1L2 
+```
+
+
+##### Convert the onset time to milliseconds
+
+```{r eval=T, echo=T, message=F}
+(mean(bootres_L1L2$t[,2], na.rm=T)-1)*10 # ASI onset
+(mean(bootres_L1L2$t[,3], na.rm=T)-1)*10 # HSS onset
+```
+
+##### Compute the confidence intervals in milliseconds for the divergence point in each group
+
+```{r eval=T, echo=T, message=F}
+(boot::boot.ci(bootres_L1L2, index=2, type="perc")$percent[4:5]-1)*10 # CI of ASI group
+(boot::boot.ci(bootres_L1L2, index=3, type="perc")$percent[4:5]-1)*10 # CI of HSS group
+```
+
+# Below: replaced their vars with ours but not sure if it works
+
+##### Add the bootstrapped divergence points and confidence intervals in the `fix.plot`
+
+```{r eval=T, echo=T, message=F, fig.width = 14}
+fix.plot + 
+  geom_point(data = subset(fix.means[fix.means$SpeakerType==1,]), 
+             aes(x = (mean(bootres_L1L2$t[,2], na.rm=T)-1)*10, y = .25), linewidth = 2) +
+  geom_errorbarh(data = subset(fix.means[fix.means$SpeakerType==1,]), 
+                 aes(xmin = (boot::boot.ci(bootres_L1L2, index=2, type="perc")$perc[4]-1)*10, 
+                     xmax = (boot::boot.ci(bootres_L1L2, index=2, type="perc")$perc[5]-1)*10,
+                     y=.25), height=.1, size=.3) +
+  
+  geom_point(data = subset(fix.means[fix.means$SpeakerType==2,]), 
+             aes(x = (mean(bootres_L1L2$t[,3], na.rm=T)-1)*10, y = .25), linewidth = 2) + 
+  geom_errorbarh(data = subset(fix.means[fix.means$SpeakerType==2,]), 
+                 aes(xmin = (boot::boot.ci(bootres_L1L2, index=3, type="perc")$perc[4]-1)*10,
+                     xmax = (boot::boot.ci(bootres_L1L2, index=3, type="perc")$perc[5]-1)*10,
+                     y=.25), height=.1, size=.3) 
+```
+
+#### Group comparison
+
+We can compute a p-value for the group comparison by creating a bootstrap distribution of the null hypothesis. To do this, we will first pool the original data from both groups, randomly assign group labels, and then estimate a difference in divergence point. We will repeat this many times to obtain a distribution of divergence point that could be expected under the null hypothesis. We will obtain the p-value by calculating the proportion of samples from this null distribution that are larger than the observed difference in divergence point in the empirical data.
+
+Below, we will calculate a p-value for the group comparison (L1 vs. L2 group). We will first define a bootstrap function.
+
+```{r eval=T, echo=T, message=F}
+boot_L1L2_pval = function(original_data, resample_indices){
+  dat_resample = original_data[resample_indices, ] # resample the data
+  
+  progress$tick() # update progress bar
+  
+  dat = dat_resample %>% 
+    # FIXME: AOI or AreaFixated
+    group_by(Participant, AOI, TimeMS_adjusted) %>% 
+    transform(SpeakerType=sample(SpeakerType,replace=F)) %>% # randomly assign group labels 
+    ungroup() #%>% 
+    
+    # # FIXME: AOI or AreaFixated
+    # group_by(Participant, AOI, TimeMS_adjusted, SpeakerType) %>%
+    # # FIXME: replaced elogfix with FixP
+    # dplyr::summarise(FixM = mean(FixP,na.rm=T)) %>%  # average fixation proportion by subject, condition and time, keeping group  
+    # ungroup()
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"]) # FIXME double check AreaFixated or AOI
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"]) # FIXME double check AreaFixated or AOI
+  
+  # return a TRUE/FALSE vector of significant positive t-scores  
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of 4 sequential TRUEs 
+  for (i in 1:(length(t_g2)-Nbins)) { 
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  delta_g1g2  # onset difference L1 vs. L2 t[,1]
+}
+
+```
+
+Run the bootstrap
+
+```{r eval=F, echo=T, message=F}
+progress = progress::progress_bar$new(total=Niter+1, clear=F, format="[:bar] :percent :eta") # initialise the progress bar
+
+bootres_L1L2_pval = boot::boot(
+  data = div.dat,  # data set to bootstrap       
+  statistic = boot_L1L2_pval,  # bootstrap function      
+  strata = div.dat$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations          
+```
+
+Save the results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_pval, file="IPC_DPA_results.subj.pval.rds")
+```
+
+If we already have saved results, we can load them.
+
+```{r eval=T, echo=T, message=F}
+load("IPC_DPA_results.subj.pval.rds")
+```
+
+Compute the p-value
+
+```{r eval=T, echo=T, message=F}
+round(mean(bootres_L1L2_pval$t[,1]>=bootres_L1L2$t0[1], na.rm=T), 15)        
+```

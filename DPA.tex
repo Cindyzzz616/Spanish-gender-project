@@ -1,0 +1,1986 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={DPA},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{DPA}
+\author{}
+\date{\vspace{-2.5em}2025-05-27}
+
+\begin{document}
+\maketitle
+
+\subsection{Divergence Point Analysis on Eye-tracking
+Data}\label{divergence-point-analysis-on-eye-tracking-data}
+
+This R script generates timecourse plots of mean fixation proportion,
+and performs a statistical analysis to determine divergence points
+between fixations on different objects. It is adapted from the R script
+in the paper ``Analysing data from the psycholinguistic visual‑world
+paradigm: Comparison of different analysis methods'', Ito \& Knoeferle
+(2023).
+
+The columns in the original eye-tracking data set are:
+
+\begin{itemize}
+\item
+  TOI: trial of interest
+\item
+  Participant: the code for a participant
+\item
+  Timeline: the version of the experiment
+\item
+  Bin: the number of the time bin for one participant and trial
+\item
+  Bin\_duration: the duration of each time bin
+\item
+  Competitor: binomially coded fixation data - 1=fixation on competitor
+  object in the current time bin; 0=fixation elsewhere
+\item
+  Distractor: binomially coded fixation data - 1=fixation on distractor
+  object in the current time bin; 0=fixation elsewhere
+\item
+  Target: binomially coded fixation data - 1=fixation on target object
+  in the current time bin; 0=fixation elsewhere
+\item
+  TimeMS: the time bin converted to time in milliseconds
+\item
+  Animacy\_C: the animacy of the competitor noun
+\item
+  Animacy\_D: the animacy of the distractor noun
+\item
+  Animacy\_T: the animacy of the target noun
+\item
+  Determiner: the type of determiner in the trial (Definite or
+  Possessive)
+\item
+  N\_Gender\_C: the lexical gender of the competitor noun (Masculine or
+  Feminine)
+\item
+  N\_Gender\_D: the lexical gender of the distractor noun (Masculine or
+  Feminine)
+\item
+  N\_Gender\_T: the lexical gender of the target noun (Masculine or
+  Feminine)
+\item
+  Phonol\_Overlap\_C: whether the competitor noun has a minimal pair
+  that only differs in the word-final vowel and lexical gender
+\item
+  Phonol\_Overlap\_D: whether the distractor noun has a minimal pair
+  that only differs in the word-final vowel and lexical gender
+\item
+  Phonol\_Overlap\_T: whether the target noun has a minimal pair that
+  only differs in the word-final vowel and lexical gender
+\item
+  ArticleOnset: the onset time (in milliseconds) of the determiner in
+  the audio cue of the current trial
+\item
+  NounOnset: the onset time (in milliseconds) of the noun in the audio
+  cue of the current trial
+\item
+  EndingOnset: the onset time (in milliseconds) of the noun's final
+  vowel in the audio cue of the current trial
+\item
+  EndingOffset: the offset time (in milliseconds) of the noun's final
+  vowel in the audio cue of the current trial
+\item
+  Remaining: the remaining time after the offset of the audio cue of the
+  current trial
+\item
+  SpeakerType: the bilingual status of participant - 1 (Adult Spanish
+  Immigrant) or 2 (Heritage Spanish Speaker)
+\item
+  Sex: the sex of the participant (Femenino or Masculino)
+\item
+  Age: the age of the participant
+\item
+  Position: the position of the object in fixation (top left, bottom
+  centre, top right)
+\item
+  Trackloss: whether the fixation is in blank space or off screen, or
+  there is a blink in the current time bin (TRUE or FALSE)
+\item
+  TimeMS\_adjusted: TimeMS zeroed at ArticleOnset
+\item
+  ArticleOnset\_adjusted: ArticleOnset zeroed at ArticleOnset (thus
+  always 0)
+\item
+  NounOnset\_adjusted: NounOnset zeroed at ArticleOnset
+\item
+  EndingOnset\_adjusted: EndingOnset zeroed at ArticleOnset
+\item
+  EndingOffset\_adjusted: EndingOffset zeroed at ArticleOnset
+\item
+  Remaining\_adjusted: Remaining zeroed at ArticleOnset
+\end{itemize}
+
+\subsubsection{1. Data preparation}\label{data-preparation}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{rm}\NormalTok{(}\AttributeTok{list =} \FunctionTok{ls}\NormalTok{()) }\CommentTok{\# Clear the workspace}
+\FunctionTok{options}\NormalTok{(}\AttributeTok{scipen =} \DecValTok{999}\NormalTok{) }\CommentTok{\# Turn off scientific notation}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Packages}\label{packages}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{require}\NormalTok{(Rmisc)}
+\FunctionTok{require}\NormalTok{(tidyverse)}
+\FunctionTok{require}\NormalTok{(ggplot2)}
+\FunctionTok{require}\NormalTok{(boot)}
+\FunctionTok{require}\NormalTok{(dplyr)}
+\FunctionTok{require}\NormalTok{(lme4)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Package versions}\label{package-versions}
+
+\begin{verbatim}
+##      lme4    Matrix      boot lubridate   forcats   stringr     dplyr     purrr 
+##  "1.1-37"   "1.7-0"  "1.3-30"   "1.9.4"   "1.0.0"   "1.5.1"   "1.1.4"   "1.0.4" 
+##     readr     tidyr    tibble   ggplot2 tidyverse     Rmisc      plyr   lattice 
+##   "2.1.5"   "1.3.1"   "3.2.1"   "3.5.2"   "2.0.0"   "1.5.1"   "1.8.9"  "0.22-6"
+\end{verbatim}
+
+\subparagraph{Read the time-course output data of the eyetracker from
+file}\label{read-the-time-course-output-data-of-the-eyetracker-from-file}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.dat }\OtherTok{=} \FunctionTok{read\_delim}\NormalTok{(}\StringTok{"/Users/cindyzhang/Desktop/Spanish Gender Project/Spanish Gender Project/data{-}2025{-}03{-}12/df\_cleaned.csv"}\NormalTok{, }\AttributeTok{delim=}\StringTok{\textquotesingle{},\textquotesingle{}}\NormalTok{)}
+\CommentTok{\# all the trackloss bins have been removed {-} in any given row, there is a fixation in one of the 3 AreaFixated }
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Inspect the raw data}\label{inspect-the-raw-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(fix.dat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       ...1            TOI            Participant          Timeline        
+##  Min.   :     1   Length:732647      Length:732647      Length:732647     
+##  1st Qu.:183162   Class :character   Class :character   Class :character  
+##  Median :366324   Mode  :character   Mode  :character   Mode  :character  
+##  Mean   :366324                                                           
+##  3rd Qu.:549486                                                           
+##  Max.   :732647                                                           
+##                                                                           
+##       Bin         Bin_duration      Competitor       Distractor    
+##  Min.   :  1.0   Min.   : 1.000   Min.   :0.0000   Min.   :0.0000  
+##  1st Qu.:181.0   1st Qu.:10.000   1st Qu.:0.0000   1st Qu.:0.0000  
+##  Median :342.0   Median :10.000   Median :0.0000   Median :0.0000  
+##  Mean   :338.2   Mean   : 9.991   Mean   :0.2076   Mean   :0.1891  
+##  3rd Qu.:499.0   3rd Qu.:10.000   3rd Qu.:0.0000   3rd Qu.:0.0000  
+##  Max.   :729.0   Max.   :10.000   Max.   :1.0000   Max.   :1.0000  
+##                                                                    
+##      Target           TimeMS      Animacy_C          Animacy_D        
+##  Min.   :0.0000   Min.   :  10   Length:732647      Length:732647     
+##  1st Qu.:0.0000   1st Qu.:1810   Class :character   Class :character  
+##  Median :1.0000   Median :3420   Mode  :character   Mode  :character  
+##  Mean   :0.6033   Mean   :3381                                        
+##  3rd Qu.:1.0000   3rd Qu.:4990                                        
+##  Max.   :1.0000   Max.   :7283                                        
+##                                                                       
+##   Animacy_T          Determiner         N_ending_C         N_ending_D       
+##  Length:732647      Length:732647      Length:732647      Length:732647     
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_ending_T         N_Gender_C         N_Gender_D         N_Gender_T       
+##  Length:732647      Length:732647      Length:732647      Length:732647     
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##  Phonol_Overlap_C   Phonol_Overlap_D Phonol_Overlap_T    ArticleOnset 
+##  Length:732647      Mode:logical     Length:732647      Min.   :2403  
+##  Class :character   NA's:732647      Class :character   1st Qu.:2448  
+##  Mode  :character                    Mode  :character   Median :2479  
+##                                                         Mean   :2490  
+##                                                         3rd Qu.:2524  
+##                                                         Max.   :2679  
+##                                                                       
+##    NounOnset     EndingOnset    EndingOffset    Remaining     SpeakerType  
+##  Min.   :2496   Min.   :2591   Min.   :2838   Min.   :3005   Min.   :1.00  
+##  1st Qu.:2576   1st Qu.:2762   1st Qu.:3020   1st Qu.:3144   1st Qu.:1.00  
+##  Median :2613   Median :2859   Median :3079   Median :3230   Median :2.00  
+##  Mean   :2619   Mean   :2877   Mean   :3107   Mean   :3239   Mean   :1.54  
+##  3rd Qu.:2669   3rd Qu.:2972   3rd Qu.:3196   3rd Qu.:3315   3rd Qu.:2.00  
+##  Max.   :2807   Max.   :3411   Max.   :3546   Max.   :3656   Max.   :2.00  
+##                                                                            
+##      Sex                 Age           Position         Trackloss      
+##  Length:732647      Min.   :19.00    Length:732647      Mode :logical  
+##  Class :character   1st Qu.:20.00    Class :character   FALSE:732647   
+##  Mode  :character   Median :23.00    Mode  :character                  
+##                     Mean   :23.75                                      
+##                     3rd Qu.:25.00                                      
+##                     Max.   :50.00                                      
+##                     NA's   :142383                                     
+##  TimeMS_adjusted   ArticleOnset_adjusted NounOnset_adjusted
+##  Min.   :-2670.0   Min.   :0             Min.   : 70.0     
+##  1st Qu.: -690.0   1st Qu.:0             1st Qu.:113.0     
+##  Median :  930.0   Median :0             Median :128.0     
+##  Mean   :  886.2   Mean   :0             Mean   :128.3     
+##  3rd Qu.: 2490.0   3rd Qu.:0             3rd Qu.:144.0     
+##  Max.   : 4750.0   Max.   :0             Max.   :202.0     
+##                                                            
+##  EndingOnset_adjusted EndingOffset_adjusted Remaining_adjusted
+##  Min.   :170.0        Min.   :365.0         Min.   : 540.0    
+##  1st Qu.:276.0        1st Qu.:544.0         1st Qu.: 668.0    
+##  Median :388.0        Median :593.0         Median : 738.0    
+##  Mean   :386.3        Mean   :616.7         Mean   : 748.9    
+##  3rd Qu.:459.0        3rd Qu.:694.0         3rd Qu.: 818.0    
+##  Max.   :773.0        Max.   :908.0         Max.   :1018.0    
+##                                                               
+##  GenderMatchTarget_D
+##  Min.   :0.0000     
+##  1st Qu.:0.0000     
+##  Median :1.0000     
+##  Mean   :0.5251     
+##  3rd Qu.:1.0000     
+##  Max.   :1.0000     
+## 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.dat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 6 x 40
+##    ...1 TOI        Participant Timeline   Bin Bin_duration Competitor Distractor
+##   <dbl> <chr>      <chr>       <chr>    <dbl>        <dbl>      <dbl>      <dbl>
+## 1     1 Trial01-d~ TA105       VersionA    23           10          0          0
+## 2     2 Trial01-d~ TA105       VersionA    24           10          0          0
+## 3     3 Trial01-d~ TA105       VersionA    25           10          0          0
+## 4     4 Trial01-d~ TA105       VersionA    26           10          0          0
+## 5     5 Trial01-d~ TA105       VersionA    27           10          0          0
+## 6     6 Trial01-d~ TA105       VersionA    28           10          0          0
+## # i 32 more variables: Target <dbl>, TimeMS <dbl>, Animacy_C <chr>,
+## #   Animacy_D <chr>, Animacy_T <chr>, Determiner <chr>, N_ending_C <chr>,
+## #   N_ending_D <chr>, N_ending_T <chr>, N_Gender_C <chr>, N_Gender_D <chr>,
+## #   N_Gender_T <chr>, Phonol_Overlap_C <chr>, Phonol_Overlap_D <lgl>,
+## #   Phonol_Overlap_T <chr>, ArticleOnset <dbl>, NounOnset <dbl>,
+## #   EndingOnset <dbl>, EndingOffset <dbl>, Remaining <dbl>, SpeakerType <dbl>,
+## #   Sex <chr>, Age <dbl>, Position <chr>, Trackloss <lgl>, ...
+\end{verbatim}
+
+\subparagraph{Remove rows where the time bins are not
+10ms}\label{remove-rows-where-the-time-bins-are-not-10ms}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.dat }\OtherTok{\textless{}{-}}\NormalTok{ fix.dat }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(Bin\_duration }\SpecialCharTok{==} \DecValTok{10}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Add AreaFixated column}\label{add-areafixated-column}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.dat }\OtherTok{\textless{}{-}}\NormalTok{ fix.dat }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{AreaFixated =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{    Competitor }\SpecialCharTok{==} \DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"Competitor"}\NormalTok{,}
+\NormalTok{    Distractor }\SpecialCharTok{==} \DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"Distractor"}\NormalTok{,}
+\NormalTok{    Target }\SpecialCharTok{==} \DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"Target"}
+\NormalTok{  ))}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Add GenderMatch column}\label{add-gendermatch-column}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.dat }\OtherTok{\textless{}{-}}\NormalTok{ fix.dat }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{GenderMatch =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{    N\_Gender\_D }\SpecialCharTok{==}\NormalTok{ N\_Gender\_T }\SpecialCharTok{\textasciitilde{}} \StringTok{"D=T"}\NormalTok{,}
+\NormalTok{    N\_Gender\_D }\SpecialCharTok{==}\NormalTok{ N\_Gender\_C }\SpecialCharTok{\textasciitilde{}} \StringTok{"D=C"}
+\NormalTok{  ))}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Reshape binomially encoded fixation data to a long format
+for plotting and
+analysis}\label{reshape-binomially-encoded-fixation-data-to-a-long-format-for-plotting-and-analysis}
+
+In the original experiment, the eyetracker takes 25 samples in each 50ms
+bin, and records the proportion of samples that fall in each AOI. Our
+eyetracker takes 1 sample in each 10ms bin, and records \emph{which} AOI
+the sample falls in (we already removed the trackloss bins, so the
+sample must be in one of the 3 AOIs, and binomially encoded as 0 or 1).
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.long }\OtherTok{\textless{}{-}}\NormalTok{ fix.dat }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_longer}\NormalTok{(}
+    \AttributeTok{cols =} \FunctionTok{c}\NormalTok{(Target, Competitor, Distractor),}
+    \AttributeTok{names\_to =} \StringTok{"AOI"}\NormalTok{,}
+    \AttributeTok{values\_to =} \StringTok{"FixP"}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{\texorpdfstring{Change \texttt{Participant}, \texttt{TOI},
+\texttt{AreaFixated}, \texttt{SpeakerType}, \texttt{AOI},
+\texttt{Phonol\_Overlap\_T} and \texttt{GenderMatch} to
+factor}{Change Participant, TOI, AreaFixated, SpeakerType, AOI, Phonol\_Overlap\_T and GenderMatch to factor}}\label{change-participant-toi-areafixated-speakertype-aoi-phonol_overlap_t-and-gendermatch-to-factor}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.long }\OtherTok{=}\NormalTok{ fix.long }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate\_at}\NormalTok{(}\FunctionTok{vars}\NormalTok{(Participant, TOI, AreaFixated, SpeakerType, AOI, Phonol\_Overlap\_T, GenderMatch), as.factor)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Merge the non minimal pair
+values}\label{merge-the-non-minimal-pair-values}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.long}\SpecialCharTok{$}\NormalTok{Phonol\_Overlap }\OtherTok{\textless{}{-}}\NormalTok{ fix.long}\SpecialCharTok{$}\NormalTok{Phonol\_Overlap\_T }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{fct\_collapse}\NormalTok{(}\AttributeTok{NonMinPair =} \FunctionTok{c}\NormalTok{(}\StringTok{"First Syll{-}unstressed"}\NormalTok{, }\StringTok{"First Syll{-}stressed"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Inspect the data after
+factoring}\label{inspect-the-data-after-factoring}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.long)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 6 x 42
+##    ...1 TOI   Participant Timeline   Bin Bin_duration TimeMS Animacy_C Animacy_D
+##   <dbl> <fct> <fct>       <chr>    <dbl>        <dbl>  <dbl> <chr>     <chr>    
+## 1     1 Tria~ TA105       VersionA    23           10    230 Animate-~ Animate-~
+## 2     1 Tria~ TA105       VersionA    23           10    230 Animate-~ Animate-~
+## 3     1 Tria~ TA105       VersionA    23           10    230 Animate-~ Animate-~
+## 4     2 Tria~ TA105       VersionA    24           10    240 Animate-~ Animate-~
+## 5     2 Tria~ TA105       VersionA    24           10    240 Animate-~ Animate-~
+## 6     2 Tria~ TA105       VersionA    24           10    240 Animate-~ Animate-~
+## # i 33 more variables: Animacy_T <chr>, Determiner <chr>, N_ending_C <chr>,
+## #   N_ending_D <chr>, N_ending_T <chr>, N_Gender_C <chr>, N_Gender_D <chr>,
+## #   N_Gender_T <chr>, Phonol_Overlap_C <chr>, Phonol_Overlap_D <lgl>,
+## #   Phonol_Overlap_T <fct>, ArticleOnset <dbl>, NounOnset <dbl>,
+## #   EndingOnset <dbl>, EndingOffset <dbl>, Remaining <dbl>, SpeakerType <fct>,
+## #   Sex <chr>, Age <dbl>, Position <chr>, Trackloss <lgl>,
+## #   TimeMS_adjusted <dbl>, ArticleOnset_adjusted <dbl>, ...
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(fix.long)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       ...1                          TOI           Participant     
+##  Min.   :     1   Trial30-pos-sapo_0  :  28779   TA131  :  81555  
+##  1st Qu.:183183   Trial41-def-mujer_0 :  28770   TA124  :  80841  
+##  Median :366326   Trial06-def-brujo_0 :  28491   TA128  :  79215  
+##  Mean   :366328   Trial08-def-puerta_0:  28377   TA142  :  76869  
+##  3rd Qu.:549482   Trial10-pos-oso_0   :  28374   TA130  :  76527  
+##  Max.   :732646   Trial29-pos-mosca_0 :  28338   TA137  :  76455  
+##                   (Other)             :2022921   (Other):1722588  
+##    Timeline              Bin         Bin_duration     TimeMS    
+##  Length:2194050     Min.   :  1.0   Min.   :10    Min.   :  10  
+##  Class :character   1st Qu.:180.0   1st Qu.:10    1st Qu.:1800  
+##  Mode  :character   Median :342.0   Median :10    Median :3420  
+##                     Mean   :337.6   Mean   :10    Mean   :3376  
+##                     3rd Qu.:498.0   3rd Qu.:10    3rd Qu.:4980  
+##                     Max.   :728.0   Max.   :10    Max.   :7280  
+##                                                                 
+##   Animacy_C          Animacy_D          Animacy_T          Determiner       
+##  Length:2194050     Length:2194050     Length:2194050     Length:2194050    
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_ending_C         N_ending_D         N_ending_T         N_Gender_C       
+##  Length:2194050     Length:2194050     Length:2194050     Length:2194050    
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_Gender_D         N_Gender_T        Phonol_Overlap_C   Phonol_Overlap_D
+##  Length:2194050     Length:2194050     Length:2194050     Mode:logical    
+##  Class :character   Class :character   Class :character   NA's:2194050    
+##  Mode  :character   Mode  :character   Mode  :character                   
+##                                                                           
+##                                                                           
+##                                                                           
+##                                                                           
+##               Phonol_Overlap_T   ArticleOnset    NounOnset     EndingOnset  
+##  First Syll-stressed  :636219   Min.   :2403   Min.   :2496   Min.   :2591  
+##  First Syll-unstressed:827898   1st Qu.:2448   1st Qu.:2576   1st Qu.:2762  
+##  Minimal Pair         :729933   Median :2479   Median :2613   Median :2859  
+##                                 Mean   :2490   Mean   :2619   Mean   :2877  
+##                                 3rd Qu.:2524   3rd Qu.:2669   3rd Qu.:2972  
+##                                 Max.   :2679   Max.   :2807   Max.   :3411  
+##                                                                             
+##   EndingOffset    Remaining    SpeakerType     Sex                 Age        
+##  Min.   :2838   Min.   :3005   1:1008648   Length:2194050     Min.   :19.0    
+##  1st Qu.:3020   1st Qu.:3144   2:1185402   Class :character   1st Qu.:20.0    
+##  Median :3079   Median :3230               Mode  :character   Median :23.0    
+##  Mean   :3107   Mean   :3239                                  Mean   :23.7    
+##  3rd Qu.:3196   3rd Qu.:3315                                  3rd Qu.:25.0    
+##  Max.   :3546   Max.   :3656                                  Max.   :50.0    
+##                                                               NA's   :426369  
+##    Position         Trackloss       TimeMS_adjusted   ArticleOnset_adjusted
+##  Length:2194050     Mode :logical   Min.   :-2670.0   Min.   :0            
+##  Class :character   FALSE:2194050   1st Qu.: -690.0   1st Qu.:0            
+##  Mode  :character                   Median :  920.0   Median :0            
+##                                     Mean   :  880.9   Mean   :0            
+##                                     3rd Qu.: 2480.0   3rd Qu.:0            
+##                                     Max.   : 4750.0   Max.   :0            
+##                                                                            
+##  NounOnset_adjusted EndingOnset_adjusted EndingOffset_adjusted
+##  Min.   : 70.0      Min.   :170.0        Min.   :365.0        
+##  1st Qu.:113.0      1st Qu.:276.0        1st Qu.:544.0        
+##  Median :128.0      Median :388.0        Median :593.0        
+##  Mean   :128.3      Mean   :386.3        Mean   :616.7        
+##  3rd Qu.:144.0      3rd Qu.:459.0        3rd Qu.:694.0        
+##  Max.   :202.0      Max.   :773.0        Max.   :908.0        
+##                                                               
+##  Remaining_adjusted GenderMatchTarget_D     AreaFixated      GenderMatch  
+##  Min.   : 540.0     Min.   :0.0000      Competitor: 456042   D=C:1041837  
+##  1st Qu.: 668.0     1st Qu.:0.0000      Distractor: 415515   D=T:1152213  
+##  Median : 738.0     Median :1.0000      Target    :1322493                
+##  Mean   : 748.9     Mean   :0.5252                                        
+##  3rd Qu.: 818.0     3rd Qu.:1.0000                                        
+##  Max.   :1018.0     Max.   :1.0000                                        
+##                                                                           
+##          AOI              FixP             Phonol_Overlap   
+##  Competitor:731350   Min.   :0.0000   NonMinPair  :1464117  
+##  Distractor:731350   1st Qu.:0.0000   Minimal Pair: 729933  
+##  Target    :731350   Median :0.0000                         
+##                      Mean   :0.3333                         
+##                      3rd Qu.:1.0000                         
+##                      Max.   :1.0000                         
+## 
+\end{verbatim}
+
+\subparagraph{\texorpdfstring{Compute the mean, SD, SE and CI for
+\texttt{FixP} for each time bin, AOI, SpeakerType, Determiner and
+TOI}{Compute the mean, SD, SE and CI for FixP for each time bin, AOI, SpeakerType, Determiner and TOI}}\label{compute-the-mean-sd-se-and-ci-for-fixp-for-each-time-bin-aoi-speakertype-determiner-and-toi}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.means }\OtherTok{=}\NormalTok{ Rmisc}\SpecialCharTok{::}\FunctionTok{summarySE}\NormalTok{(fix.long, }\AttributeTok{measurevar=}\StringTok{\textquotesingle{}FixP\textquotesingle{}}\NormalTok{, }\AttributeTok{groupvars=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}TimeMS\_adjusted\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}SpeakerType\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Determiner\textquotesingle{}}\NormalTok{), }\AttributeTok{na.rm=}\NormalTok{T)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in qt(conf.interval/2 + 0.5, datac$N - 1): NaNs produced
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.means)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   TimeMS_adjusted SpeakerType        AOI Determiner N FixP sd se ci
+## 1           -2670           1 Competitor   Definite 5    0  0  0  0
+## 2           -2670           1 Distractor   Definite 5    0  0  0  0
+## 3           -2670           1     Target   Definite 5    1  0  0  0
+## 4           -2670           2 Competitor   Definite 4    0  0  0  0
+## 5           -2670           2 Distractor   Definite 4    0  0  0  0
+## 6           -2670           2     Target   Definite 4    1  0  0  0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(fix.means)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  TimeMS_adjusted   SpeakerType         AOI        Determiner       
+##  Min.   :-2670.0   1:4011      Competitor:2793   Length:8379       
+##  1st Qu.: -900.0   2:4368      Distractor:2793   Class :character  
+##  Median :  850.0               Target    :2793   Mode  :character  
+##  Mean   :  853.9                                                   
+##  3rd Qu.: 2590.0                                                   
+##  Max.   : 4750.0                                                   
+##                                                                    
+##        N              FixP              sd               se         
+##  Min.   :  1.0   Min.   :0.0000   Min.   :0.0000   Min.   :0.00000  
+##  1st Qu.:256.0   1st Qu.:0.1065   1st Qu.:0.2959   1st Qu.:0.01722  
+##  Median :285.0   Median :0.3152   Median :0.4342   Median :0.02610  
+##  Mean   :261.9   Mean   :0.3333   Mean   :0.3775   Mean   :0.02597  
+##  3rd Qu.:303.0   3rd Qu.:0.3711   3rd Qu.:0.4724   3rd Qu.:0.02857  
+##  Max.   :364.0   Max.   :1.0000   Max.   :0.5774   Max.   :0.33333  
+##                                   NA's   :132      NA's   :132      
+##        ci         
+##  Min.   :0.00000  
+##  1st Qu.:0.03390  
+##  Median :0.05136  
+##  Mean   :0.05370  
+##  3rd Qu.:0.05625  
+##  Max.   :1.43422  
+##  NA's   :132
+\end{verbatim}
+
+\subparagraph{Compute Mean, etc. that takes Phonol\_Overlap into
+account}\label{compute-mean-etc.-that-takes-phonol_overlap-into-account}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.means.phonol }\OtherTok{=}\NormalTok{ Rmisc}\SpecialCharTok{::}\FunctionTok{summarySE}\NormalTok{(fix.long, }\AttributeTok{measurevar=}\StringTok{\textquotesingle{}FixP\textquotesingle{}}\NormalTok{, }\AttributeTok{groupvars=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}TimeMS\_adjusted\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}SpeakerType\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Determiner\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Phonol\_Overlap\textquotesingle{}}\NormalTok{), }\AttributeTok{na.rm=}\NormalTok{T)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in qt(conf.interval/2 + 0.5, datac$N - 1): NaNs produced
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.means.phonol)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   TimeMS_adjusted SpeakerType        AOI Determiner Phonol_Overlap N FixP sd se
+## 1           -2670           1 Competitor   Definite   Minimal Pair 5    0  0  0
+## 2           -2670           1 Distractor   Definite   Minimal Pair 5    0  0  0
+## 3           -2670           1     Target   Definite   Minimal Pair 5    1  0  0
+## 4           -2670           2 Competitor   Definite   Minimal Pair 4    0  0  0
+## 5           -2670           2 Distractor   Definite   Minimal Pair 4    0  0  0
+## 6           -2670           2     Target   Definite   Minimal Pair 4    1  0  0
+##   ci
+## 1  0
+## 2  0
+## 3  0
+## 4  0
+## 5  0
+## 6  0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(fix.means.phonol)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  TimeMS_adjusted   SpeakerType         AOI        Determiner       
+##  Min.   :-2670.0   1:7941      Competitor:5488   Length:16464      
+##  1st Qu.: -890.0   2:8523      Distractor:5488   Class :character  
+##  Median :  830.0               Target    :5488   Mode  :character  
+##  Mean   :  832.7                                                   
+##  3rd Qu.: 2540.0                                                   
+##  Max.   : 4750.0                                                   
+##                                                                    
+##       Phonol_Overlap       N              FixP              sd        
+##  NonMinPair  :8229   Min.   :  1.0   Min.   :0.0000   Min.   :0.0000  
+##  Minimal Pair:8235   1st Qu.: 92.0   1st Qu.:0.1121   1st Qu.:0.3040  
+##                      Median :112.0   Median :0.3084   Median :0.4312  
+##                      Mean   :133.3   Mean   :0.3333   Mean   :0.3841  
+##                      3rd Qu.:190.0   3rd Qu.:0.3887   3rd Qu.:0.4739  
+##                      Max.   :246.0   Max.   :1.0000   Max.   :0.7071  
+##                                                       NA's   :384     
+##        se               ci        
+##  Min.   :0.0000   Min.   :0.0000  
+##  1st Qu.:0.0254   1st Qu.:0.0502  
+##  Median :0.0348   Median :0.0686  
+##  Mean   :0.0374   Mean   :0.0783  
+##  3rd Qu.:0.0461   3rd Qu.:0.0915  
+##  Max.   :0.5000   Max.   :6.3531  
+##  NA's   :384      NA's   :384
+\end{verbatim}
+
+\subparagraph{Compute Mean, etc. that takes Phonol\_Overlap AND
+GenderMatch into
+account}\label{compute-mean-etc.-that-takes-phonol_overlap-and-gendermatch-into-account}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.means.fourgroups }\OtherTok{=}\NormalTok{ Rmisc}\SpecialCharTok{::}\FunctionTok{summarySE}\NormalTok{(fix.long, }\AttributeTok{measurevar=}\StringTok{\textquotesingle{}FixP\textquotesingle{}}\NormalTok{, }\AttributeTok{groupvars=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}TimeMS\_adjusted\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}SpeakerType\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Determiner\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Phonol\_Overlap\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}GenderMatch\textquotesingle{}}\NormalTok{), }\AttributeTok{na.rm=}\NormalTok{T)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in qt(conf.interval/2 + 0.5, datac$N - 1): NaNs produced
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.means.fourgroups)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   TimeMS_adjusted SpeakerType        AOI Determiner Phonol_Overlap GenderMatch
+## 1           -2670           1 Competitor   Definite   Minimal Pair         D=C
+## 2           -2670           1 Distractor   Definite   Minimal Pair         D=C
+## 3           -2670           1     Target   Definite   Minimal Pair         D=C
+## 4           -2670           2 Competitor   Definite   Minimal Pair         D=C
+## 5           -2670           2 Distractor   Definite   Minimal Pair         D=C
+## 6           -2670           2     Target   Definite   Minimal Pair         D=C
+##   N FixP sd se ci
+## 1 5    0  0  0  0
+## 2 5    0  0  0  0
+## 3 5    1  0  0  0
+## 4 4    0  0  0  0
+## 5 4    0  0  0  0
+## 6 4    1  0  0  0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(fix.means.fourgroups)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  TimeMS_adjusted SpeakerType         AOI         Determiner       
+##  Min.   :-2670   1:15756     Competitor:10768   Length:32304      
+##  1st Qu.: -900   2:16548     Distractor:10768   Class :character  
+##  Median :  790               Target    :10768   Mode  :character  
+##  Mean   :  790                                                    
+##  3rd Qu.: 2470                                                    
+##  Max.   : 4750                                                    
+##                                                                   
+##       Phonol_Overlap  GenderMatch       N               FixP       
+##  NonMinPair  :16155   D=C:16068   Min.   :  1.00   Min.   :0.0000  
+##  Minimal Pair:16149   D=T:16236   1st Qu.: 44.00   1st Qu.:0.1143  
+##                                   Median : 62.00   Median :0.3000  
+##                                   Mean   : 67.92   Mean   :0.3333  
+##                                   3rd Qu.: 95.00   3rd Qu.:0.4054  
+##                                   Max.   :142.00   Max.   :1.0000  
+##                                                                    
+##        sd               se               ci        
+##  Min.   :0.0000   Min.   :0.0000   Min.   :0.0000  
+##  1st Qu.:0.3043   1st Qu.:0.0354   1st Qu.:0.0708  
+##  Median :0.4280   Median :0.0489   Median :0.0975  
+##  Mean   :0.3828   Mean   :0.0516   Mean   :0.1126  
+##  3rd Qu.:0.4764   3rd Qu.:0.0635   3rd Qu.:0.1276  
+##  Max.   :0.7071   Max.   :0.5000   Max.   :6.3531  
+##  NA's   :525      NA's   :525      NA's   :525
+\end{verbatim}
+
+\subparagraph{Compute Mean, etc. that takes GenderMatch into
+account}\label{compute-mean-etc.-that-takes-gendermatch-into-account}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.means.gendermatch }\OtherTok{=}\NormalTok{ Rmisc}\SpecialCharTok{::}\FunctionTok{summarySE}\NormalTok{(fix.long, }\AttributeTok{measurevar=}\StringTok{\textquotesingle{}FixP\textquotesingle{}}\NormalTok{, }\AttributeTok{groupvars=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}TimeMS\_adjusted\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}SpeakerType\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Determiner\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}GenderMatch\textquotesingle{}}\NormalTok{), }\AttributeTok{na.rm=}\NormalTok{T)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in qt(conf.interval/2 + 0.5, datac$N - 1): NaNs produced
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.means.gendermatch)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   TimeMS_adjusted SpeakerType        AOI Determiner GenderMatch N FixP sd se ci
+## 1           -2670           1 Competitor   Definite         D=C 5    0  0  0  0
+## 2           -2670           1 Distractor   Definite         D=C 5    0  0  0  0
+## 3           -2670           1     Target   Definite         D=C 5    1  0  0  0
+## 4           -2670           2 Competitor   Definite         D=C 4    0  0  0  0
+## 5           -2670           2 Distractor   Definite         D=C 4    0  0  0  0
+## 6           -2670           2     Target   Definite         D=C 4    1  0  0  0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(fix.means.gendermatch)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  TimeMS_adjusted   SpeakerType         AOI        Determiner        GenderMatch
+##  Min.   :-2670.0   1:7953      Competitor:5501   Length:16503       D=C:8202   
+##  1st Qu.: -890.0   2:8550      Distractor:5501   Class :character   D=T:8301   
+##  Median :  830.0               Target    :5501   Mode  :character              
+##  Mean   :  833.2                                                               
+##  3rd Qu.: 2550.0                                                               
+##  Max.   : 4750.0                                                               
+##                                                                                
+##        N              FixP              sd               se        
+##  Min.   :  1.0   Min.   :0.0000   Min.   :0.0000   Min.   :0.0000  
+##  1st Qu.:127.0   1st Qu.:0.1078   1st Qu.:0.2992   1st Qu.:0.0248  
+##  Median :141.0   Median :0.3101   Median :0.4337   Median :0.0366  
+##  Mean   :132.9   Mean   :0.3333   Mean   :0.3830   Mean   :0.0359  
+##  3rd Qu.:156.0   3rd Qu.:0.3816   3rd Qu.:0.4738   3rd Qu.:0.0406  
+##  Max.   :196.0   Max.   :1.0000   Max.   :0.7071   Max.   :0.5000  
+##                                   NA's   :405      NA's   :405     
+##        ci        
+##  Min.   :0.0000  
+##  1st Qu.:0.0490  
+##  Median :0.0723  
+##  Mean   :0.0754  
+##  3rd Qu.:0.0803  
+##  Max.   :6.3531  
+##  NA's   :405
+\end{verbatim}
+
+\subsubsection{2. Plotting}\label{plotting}
+
+\subparagraph{Plot mean fixation proportion to each AOI with standard
+error, dividing by SpeakerType (ASI and HSS) and Determiner type
+(Definite and
+Possessive)}\label{plot-mean-fixation-proportion-to-each-aoi-with-standard-error-dividing-by-speakertype-asi-and-hss-and-determiner-type-definite-and-possessive}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.plot }\OtherTok{=} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{Determiner }\SpecialCharTok{+}\NormalTok{ SpeakerType, }\AttributeTok{ncol=}\DecValTok{2}\NormalTok{,}
+             \AttributeTok{labeller =} \FunctionTok{labeller}\NormalTok{(}
+              \AttributeTok{Determiner =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Definite"} \OtherTok{=} \StringTok{"Definite determiner"}\NormalTok{,}
+                \StringTok{"Possessive"} \OtherTok{=} \StringTok{"Possessive determiner"}
+\NormalTok{              ),}
+              \AttributeTok{SpeakerType =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"1"} \OtherTok{=} \StringTok{"ASI"}\NormalTok{,}
+                \StringTok{"2"} \OtherTok{=} \StringTok{"HSS"}
+\NormalTok{              )}
+\NormalTok{            )}
+\NormalTok{             ) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted, }\AttributeTok{y=}\NormalTok{FixP, }\AttributeTok{group=}\NormalTok{AOI, }\AttributeTok{colour=}\NormalTok{AOI, }\AttributeTok{lty=}\NormalTok{AOI), }\AttributeTok{lwd=}\FloatTok{1.5}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# }\AlertTok{TODO}\CommentTok{ use SE or CI here?}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted,}\AttributeTok{ymin=}\NormalTok{FixP}\SpecialCharTok{{-}}\NormalTok{se,}\AttributeTok{ymax=}\NormalTok{FixP}\SpecialCharTok{+}\NormalTok{se,}\AttributeTok{color=}\NormalTok{AOI,}\AttributeTok{fill=}\NormalTok{AOI), }\AttributeTok{linewidth=}\NormalTok{.}\DecValTok{2}\NormalTok{, }\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{, }\AttributeTok{lty=}\StringTok{"dashed"}\NormalTok{, }\AttributeTok{show.legend=}\NormalTok{F)  }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{y=}\StringTok{"Fixation Proportion"}\NormalTok{, }\AttributeTok{x=}\StringTok{"Time relative to the target word onset (ms)"}\NormalTok{) }\SpecialCharTok{+} 
+  
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{limits=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{),}\AttributeTok{expand=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{),}\AttributeTok{breaks=}\FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{, }\DecValTok{200}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_color\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_linetype\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"solid"}\NormalTok{,}\StringTok{"dotted"}\NormalTok{, }\StringTok{"dotdash"}\NormalTok{)) }\SpecialCharTok{+}
+  
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{text=}\FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size=}\DecValTok{20}\NormalTok{),}
+    \AttributeTok{legend.key.height=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{3}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{legend.key.width=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{6}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{panel.spacing=}\FunctionTok{unit}\NormalTok{(}\DecValTok{1}\NormalTok{, }\StringTok{"in"}\NormalTok{)) }
+
+\NormalTok{fix.plot}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DPA_files/figure-latex/unnamed-chunk-17-1.pdf}}
+
+\subparagraph{Save the plot}\label{save-the-plot}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"plots/fixation\_plot.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{20}\NormalTok{, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\subparagraph{Plot mean fixation proportion to each AOI with standard
+error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite
+and Possessive) and Phonological Overlap (Minimal Pair and Non Minimal
+Pair)}\label{plot-mean-fixation-proportion-to-each-aoi-with-standard-error-dividing-by-speakertype-asi-and-hss-determiner-type-definite-and-possessive-and-phonological-overlap-minimal-pair-and-non-minimal-pair}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.plot.phonol }\OtherTok{=} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{Determiner }\SpecialCharTok{+}\NormalTok{ SpeakerType }\SpecialCharTok{+}\NormalTok{ Phonol\_Overlap, }\AttributeTok{ncol=}\DecValTok{4}\NormalTok{,}
+             \AttributeTok{labeller =} \FunctionTok{labeller}\NormalTok{(}
+              \AttributeTok{Determiner =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Definite"} \OtherTok{=} \StringTok{"Definite determiner"}\NormalTok{,}
+                \StringTok{"Possessive"} \OtherTok{=} \StringTok{"Possessive determiner"}
+\NormalTok{              ),}
+              \AttributeTok{SpeakerType =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"1"} \OtherTok{=} \StringTok{"ASI"}\NormalTok{,}
+                \StringTok{"2"} \OtherTok{=} \StringTok{"HSS"}
+\NormalTok{              ),}
+              \AttributeTok{Phonol\_Overlap =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Minimal Pair"} \OtherTok{=} \StringTok{"Minimal Pair"}\NormalTok{,}
+                \StringTok{"NonMinPair"} \OtherTok{=} \StringTok{"Non Minimal Pair"}
+\NormalTok{              )}
+\NormalTok{            )}
+\NormalTok{             ) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.phonol,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted, }\AttributeTok{y=}\NormalTok{FixP, }\AttributeTok{group=}\NormalTok{AOI, }\AttributeTok{colour=}\NormalTok{AOI, }\AttributeTok{lty=}\NormalTok{AOI), }\AttributeTok{lwd=}\FloatTok{1.5}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# }\AlertTok{TODO}\CommentTok{ use SE or CI here?}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.phonol,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted,}\AttributeTok{ymin=}\NormalTok{FixP}\SpecialCharTok{{-}}\NormalTok{se,}\AttributeTok{ymax=}\NormalTok{FixP}\SpecialCharTok{+}\NormalTok{se,}\AttributeTok{color=}\NormalTok{AOI,}\AttributeTok{fill=}\NormalTok{AOI), }\AttributeTok{linewidth=}\NormalTok{.}\DecValTok{2}\NormalTok{, }\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{, }\AttributeTok{lty=}\StringTok{"dashed"}\NormalTok{, }\AttributeTok{show.legend=}\NormalTok{F)  }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{y=}\StringTok{"Fixation Proportion"}\NormalTok{, }\AttributeTok{x=}\StringTok{"Time relative to the target word onset (ms)"}\NormalTok{) }\SpecialCharTok{+} 
+  
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{limits=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{),}\AttributeTok{expand=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{),}\AttributeTok{breaks=}\FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{, }\DecValTok{200}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_color\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_linetype\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"solid"}\NormalTok{,}\StringTok{"dotted"}\NormalTok{, }\StringTok{"dotdash"}\NormalTok{)) }\SpecialCharTok{+}
+  
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{text=}\FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size=}\DecValTok{20}\NormalTok{),}
+    \AttributeTok{legend.key.height=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{3}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{legend.key.width=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{6}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{panel.spacing=}\FunctionTok{unit}\NormalTok{(}\DecValTok{1}\NormalTok{, }\StringTok{"in"}\NormalTok{)) }
+
+\NormalTok{fix.plot.phonol}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DPA_files/figure-latex/unnamed-chunk-19-1.pdf}}
+
+\subparagraph{Save the plot}\label{save-the-plot-1}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"plots/fixation\_plot\_phonol.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{40}\NormalTok{, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\subparagraph{Plot mean fixation proportion to each AOI with standard
+error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite
+and Possessive), Phonological Overlap (Minimal Pair and Non Minimal
+Pair) and GenderMatch (D=T and
+D=C)}\label{plot-mean-fixation-proportion-to-each-aoi-with-standard-error-dividing-by-speakertype-asi-and-hss-determiner-type-definite-and-possessive-phonological-overlap-minimal-pair-and-non-minimal-pair-and-gendermatch-dt-and-dc}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.plot.fourgroups }\OtherTok{=} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{Determiner }\SpecialCharTok{+}\NormalTok{ SpeakerType }\SpecialCharTok{+}\NormalTok{ Phonol\_Overlap }\SpecialCharTok{+}\NormalTok{ GenderMatch, }\AttributeTok{ncol=}\DecValTok{4}\NormalTok{,}
+             \AttributeTok{labeller =} \FunctionTok{labeller}\NormalTok{(}
+              \AttributeTok{Determiner =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Definite"} \OtherTok{=} \StringTok{"Definite determiner"}\NormalTok{,}
+                \StringTok{"Possessive"} \OtherTok{=} \StringTok{"Possessive determiner"}
+\NormalTok{              ),}
+              \AttributeTok{SpeakerType =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"1"} \OtherTok{=} \StringTok{"ASI"}\NormalTok{,}
+                \StringTok{"2"} \OtherTok{=} \StringTok{"HSS"}
+\NormalTok{              ),}
+              \AttributeTok{Phonol\_Overlap =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Minimal Pair"} \OtherTok{=} \StringTok{"Minimal Pair"}\NormalTok{,}
+                \StringTok{"NonMinPair"} \OtherTok{=} \StringTok{"Non Minimal Pair"}
+\NormalTok{              ),}
+              \AttributeTok{GenderMatch =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"D=T"} \OtherTok{=} \StringTok{"Distractor = Target"}\NormalTok{,}
+                \StringTok{"D=C"} \OtherTok{=} \StringTok{"Distractor = Competitor"}
+\NormalTok{              )}
+\NormalTok{            )}
+\NormalTok{             ) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.fourgroups,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted, }\AttributeTok{y=}\NormalTok{FixP, }\AttributeTok{group=}\NormalTok{AOI, }\AttributeTok{colour=}\NormalTok{AOI, }\AttributeTok{lty=}\NormalTok{AOI), }\AttributeTok{lwd=}\FloatTok{1.5}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# }\AlertTok{TODO}\CommentTok{ use SE or CI here?}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.fourgroups,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted,}\AttributeTok{ymin=}\NormalTok{FixP}\SpecialCharTok{{-}}\NormalTok{se,}\AttributeTok{ymax=}\NormalTok{FixP}\SpecialCharTok{+}\NormalTok{se,}\AttributeTok{color=}\NormalTok{AOI,}\AttributeTok{fill=}\NormalTok{AOI), }\AttributeTok{linewidth=}\NormalTok{.}\DecValTok{2}\NormalTok{, }\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{, }\AttributeTok{lty=}\StringTok{"dashed"}\NormalTok{, }\AttributeTok{show.legend=}\NormalTok{F)  }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{y=}\StringTok{"Fixation Proportion"}\NormalTok{, }\AttributeTok{x=}\StringTok{"Time relative to the target word onset (ms)"}\NormalTok{) }\SpecialCharTok{+} 
+  
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{limits=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{),}\AttributeTok{expand=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{),}\AttributeTok{breaks=}\FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{, }\DecValTok{200}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_color\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_linetype\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"solid"}\NormalTok{,}\StringTok{"dotted"}\NormalTok{, }\StringTok{"dotdash"}\NormalTok{)) }\SpecialCharTok{+}
+  
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{text=}\FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size=}\DecValTok{20}\NormalTok{),}
+    \AttributeTok{legend.key.height=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{3}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{legend.key.width=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{6}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{panel.spacing=}\FunctionTok{unit}\NormalTok{(}\DecValTok{1}\NormalTok{, }\StringTok{"in"}\NormalTok{)) }
+
+\NormalTok{fix.plot.fourgroups}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DPA_files/figure-latex/unnamed-chunk-21-1.pdf}}
+
+\subparagraph{Save the plot}\label{save-the-plot-2}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"plots/fixation\_plot\_fourgroups.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{40}\NormalTok{, }\AttributeTok{height =} \DecValTok{30}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\subparagraph{Plot mean fixation proportion to each AOI with standard
+error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite
+and Possessive) and GenderMatch (D=T and
+D=C)}\label{plot-mean-fixation-proportion-to-each-aoi-with-standard-error-dividing-by-speakertype-asi-and-hss-determiner-type-definite-and-possessive-and-gendermatch-dt-and-dc}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.plot.gendermatch }\OtherTok{=} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{Determiner }\SpecialCharTok{+}\NormalTok{ SpeakerType }\SpecialCharTok{+}\NormalTok{ GenderMatch, }\AttributeTok{ncol=}\DecValTok{4}\NormalTok{,}
+             \AttributeTok{labeller =} \FunctionTok{labeller}\NormalTok{(}
+              \AttributeTok{Determiner =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Definite"} \OtherTok{=} \StringTok{"Definite determiner"}\NormalTok{,}
+                \StringTok{"Possessive"} \OtherTok{=} \StringTok{"Possessive determiner"}
+\NormalTok{              ),}
+              \AttributeTok{SpeakerType =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"1"} \OtherTok{=} \StringTok{"ASI"}\NormalTok{,}
+                \StringTok{"2"} \OtherTok{=} \StringTok{"HSS"}
+\NormalTok{              ),}
+              \AttributeTok{GenderMatch =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"D=T"} \OtherTok{=} \StringTok{"Distractor = Target"}\NormalTok{,}
+                \StringTok{"D=C"} \OtherTok{=} \StringTok{"Distractor = Competitor"}
+\NormalTok{              )}
+\NormalTok{            )}
+\NormalTok{             ) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.gendermatch,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted, }\AttributeTok{y=}\NormalTok{FixP, }\AttributeTok{group=}\NormalTok{AOI, }\AttributeTok{colour=}\NormalTok{AOI, }\AttributeTok{lty=}\NormalTok{AOI), }\AttributeTok{lwd=}\FloatTok{1.5}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# }\AlertTok{TODO}\CommentTok{ use SE or CI here?}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.gendermatch,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted,}\AttributeTok{ymin=}\NormalTok{FixP}\SpecialCharTok{{-}}\NormalTok{se,}\AttributeTok{ymax=}\NormalTok{FixP}\SpecialCharTok{+}\NormalTok{se,}\AttributeTok{color=}\NormalTok{AOI,}\AttributeTok{fill=}\NormalTok{AOI), }\AttributeTok{linewidth=}\NormalTok{.}\DecValTok{2}\NormalTok{, }\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{, }\AttributeTok{lty=}\StringTok{"dashed"}\NormalTok{, }\AttributeTok{show.legend=}\NormalTok{F)  }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{y=}\StringTok{"Fixation Proportion"}\NormalTok{, }\AttributeTok{x=}\StringTok{"Time relative to the target word onset (ms)"}\NormalTok{) }\SpecialCharTok{+} 
+  
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{limits=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{),}\AttributeTok{expand=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{),}\AttributeTok{breaks=}\FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{, }\DecValTok{200}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_color\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#af2013"}\NormalTok{,}\StringTok{"\#002e65"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_linetype\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"solid"}\NormalTok{,}\StringTok{"dotted"}\NormalTok{, }\StringTok{"dotdash"}\NormalTok{)) }\SpecialCharTok{+}
+  
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{text=}\FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size=}\DecValTok{20}\NormalTok{),}
+    \AttributeTok{legend.key.height=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{3}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{legend.key.width=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{6}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{panel.spacing=}\FunctionTok{unit}\NormalTok{(}\DecValTok{1}\NormalTok{, }\StringTok{"in"}\NormalTok{)) }
+
+\NormalTok{fix.plot.gendermatch}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DPA_files/figure-latex/unnamed-chunk-23-1.pdf}}
+
+\subparagraph{Save the plot}\label{save-the-plot-3}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"plots/fixation\_plot\_gendermatch.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{40}\NormalTok{, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1686 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\subparagraph{Combine Competitor and Distractor to create NonTarget
+columns and reduce the data set to two
+variables}\label{combine-competitor-and-distractor-to-create-nontarget-columns-and-reduce-the-data-set-to-two-variables}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.twovar }\OtherTok{\textless{}{-}}\NormalTok{ fix.dat }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{NonTarget =}\NormalTok{ Competitor }\SpecialCharTok{+}\NormalTok{ Distractor) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{Competitor, }\SpecialCharTok{{-}}\NormalTok{Distractor)}
+
+\NormalTok{fix.twovar }\OtherTok{\textless{}{-}}\NormalTok{ fix.twovar }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{AreaFixated =} \FunctionTok{ifelse}\NormalTok{(AreaFixated }\SpecialCharTok{==} \StringTok{"Target"}\NormalTok{, }\StringTok{"Target"}\NormalTok{, }\StringTok{"NonTarget"}\NormalTok{))}
+
+\NormalTok{fix.twovar}\SpecialCharTok{$}\NormalTok{AreaFixated }\OtherTok{\textless{}{-}} \FunctionTok{as.factor}\NormalTok{(fix.twovar}\SpecialCharTok{$}\NormalTok{AreaFixated)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Pivot binomially encoded
+columns}\label{pivot-binomially-encoded-columns}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.twovar }\OtherTok{\textless{}{-}}\NormalTok{ fix.twovar }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_longer}\NormalTok{(}
+    \AttributeTok{cols =} \FunctionTok{c}\NormalTok{(Target, NonTarget),}
+    \AttributeTok{names\_to =} \StringTok{"AOI"}\NormalTok{,}
+    \AttributeTok{values\_to =} \StringTok{"FixP"}
+\NormalTok{  )}
+
+\NormalTok{fix.twovar }\OtherTok{=}\NormalTok{ fix.twovar }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate\_at}\NormalTok{(}\FunctionTok{vars}\NormalTok{(AOI), as.factor)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Merge the non minimal pair
+values}\label{merge-the-non-minimal-pair-values-1}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.twovar}\SpecialCharTok{$}\NormalTok{Phonol\_Overlap }\OtherTok{\textless{}{-}}\NormalTok{ fix.twovar}\SpecialCharTok{$}\NormalTok{Phonol\_Overlap\_T }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{fct\_collapse}\NormalTok{(}\AttributeTok{NonMinPair =} \FunctionTok{c}\NormalTok{(}\StringTok{"First Syll{-}unstressed"}\NormalTok{, }\StringTok{"First Syll{-}stressed"}\NormalTok{))}
+
+\FunctionTok{summary}\NormalTok{(fix.twovar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       ...1            TOI            Participant          Timeline        
+##  Min.   :     1   Length:1462700     Length:1462700     Length:1462700    
+##  1st Qu.:183183   Class :character   Class :character   Class :character  
+##  Median :366326   Mode  :character   Mode  :character   Mode  :character  
+##  Mean   :366328                                                           
+##  3rd Qu.:549482                                                           
+##  Max.   :732646                                                           
+##                                                                           
+##       Bin         Bin_duration     TimeMS      Animacy_C        
+##  Min.   :  1.0   Min.   :10    Min.   :  10   Length:1462700    
+##  1st Qu.:180.0   1st Qu.:10    1st Qu.:1800   Class :character  
+##  Median :342.0   Median :10    Median :3420   Mode  :character  
+##  Mean   :337.6   Mean   :10    Mean   :3376                     
+##  3rd Qu.:498.0   3rd Qu.:10    3rd Qu.:4980                     
+##  Max.   :728.0   Max.   :10    Max.   :7280                     
+##                                                                 
+##   Animacy_D          Animacy_T          Determiner         N_ending_C       
+##  Length:1462700     Length:1462700     Length:1462700     Length:1462700    
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_ending_D         N_ending_T         N_Gender_C         N_Gender_D       
+##  Length:1462700     Length:1462700     Length:1462700     Length:1462700    
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_Gender_T        Phonol_Overlap_C   Phonol_Overlap_D Phonol_Overlap_T  
+##  Length:1462700     Length:1462700     Mode:logical     Length:1462700    
+##  Class :character   Class :character   NA's:1462700     Class :character  
+##  Mode  :character   Mode  :character                    Mode  :character  
+##                                                                           
+##                                                                           
+##                                                                           
+##                                                                           
+##   ArticleOnset    NounOnset     EndingOnset    EndingOffset    Remaining   
+##  Min.   :2403   Min.   :2496   Min.   :2591   Min.   :2838   Min.   :3005  
+##  1st Qu.:2448   1st Qu.:2576   1st Qu.:2762   1st Qu.:3020   1st Qu.:3144  
+##  Median :2479   Median :2613   Median :2859   Median :3079   Median :3230  
+##  Mean   :2490   Mean   :2619   Mean   :2877   Mean   :3107   Mean   :3239  
+##  3rd Qu.:2524   3rd Qu.:2669   3rd Qu.:2972   3rd Qu.:3196   3rd Qu.:3315  
+##  Max.   :2679   Max.   :2807   Max.   :3411   Max.   :3546   Max.   :3656  
+##                                                                            
+##   SpeakerType       Sex                 Age           Position        
+##  Min.   :1.00   Length:1462700     Min.   :19.00    Length:1462700    
+##  1st Qu.:1.00   Class :character   1st Qu.:20.00    Class :character  
+##  Median :2.00   Mode  :character   Median :23.00    Mode  :character  
+##  Mean   :1.54                      Mean   :23.75                      
+##  3rd Qu.:2.00                      3rd Qu.:25.00                      
+##  Max.   :2.00                      Max.   :50.00                      
+##                                    NA's   :284246                     
+##  Trackloss       TimeMS_adjusted   ArticleOnset_adjusted NounOnset_adjusted
+##  Mode :logical   Min.   :-2670.0   Min.   :0             Min.   : 70.0     
+##  FALSE:1462700   1st Qu.: -690.0   1st Qu.:0             1st Qu.:113.0     
+##                  Median :  920.0   Median :0             Median :128.0     
+##                  Mean   :  880.9   Mean   :0             Mean   :128.3     
+##                  3rd Qu.: 2480.0   3rd Qu.:0             3rd Qu.:144.0     
+##                  Max.   : 4750.0   Max.   :0             Max.   :202.0     
+##                                                                            
+##  EndingOnset_adjusted EndingOffset_adjusted Remaining_adjusted
+##  Min.   :170.0        Min.   :365.0         Min.   : 540.0    
+##  1st Qu.:276.0        1st Qu.:544.0         1st Qu.: 668.0    
+##  Median :388.0        Median :593.0         Median : 738.0    
+##  Mean   :386.3        Mean   :616.7         Mean   : 748.9    
+##  3rd Qu.:459.0        3rd Qu.:694.0         3rd Qu.: 818.0    
+##  Max.   :773.0        Max.   :908.0         Max.   :1018.0    
+##                                                               
+##  GenderMatchTarget_D    AreaFixated     GenderMatch               AOI        
+##  Min.   :0.0000      NonTarget:581038   Length:1462700     NonTarget:731350  
+##  1st Qu.:0.0000      Target   :881662   Class :character   Target   :731350  
+##  Median :1.0000                         Mode  :character                     
+##  Mean   :0.5252                                                              
+##  3rd Qu.:1.0000                                                              
+##  Max.   :1.0000                                                              
+##                                                                              
+##       FixP          Phonol_Overlap  
+##  Min.   :0.0   NonMinPair  :976078  
+##  1st Qu.:0.0   Minimal Pair:486622  
+##  Median :0.5                        
+##  Mean   :0.5                        
+##  3rd Qu.:1.0                        
+##  Max.   :1.0                        
+## 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.twovar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 6 x 42
+##    ...1 TOI   Participant Timeline   Bin Bin_duration TimeMS Animacy_C Animacy_D
+##   <dbl> <chr> <chr>       <chr>    <dbl>        <dbl>  <dbl> <chr>     <chr>    
+## 1     1 Tria~ TA105       VersionA    23           10    230 Animate-~ Animate-~
+## 2     1 Tria~ TA105       VersionA    23           10    230 Animate-~ Animate-~
+## 3     2 Tria~ TA105       VersionA    24           10    240 Animate-~ Animate-~
+## 4     2 Tria~ TA105       VersionA    24           10    240 Animate-~ Animate-~
+## 5     3 Tria~ TA105       VersionA    25           10    250 Animate-~ Animate-~
+## 6     3 Tria~ TA105       VersionA    25           10    250 Animate-~ Animate-~
+## # i 33 more variables: Animacy_T <chr>, Determiner <chr>, N_ending_C <chr>,
+## #   N_ending_D <chr>, N_ending_T <chr>, N_Gender_C <chr>, N_Gender_D <chr>,
+## #   N_Gender_T <chr>, Phonol_Overlap_C <chr>, Phonol_Overlap_D <lgl>,
+## #   Phonol_Overlap_T <chr>, ArticleOnset <dbl>, NounOnset <dbl>,
+## #   EndingOnset <dbl>, EndingOffset <dbl>, Remaining <dbl>, SpeakerType <dbl>,
+## #   Sex <chr>, Age <dbl>, Position <chr>, Trackloss <lgl>,
+## #   TimeMS_adjusted <dbl>, ArticleOnset_adjusted <dbl>, ...
+\end{verbatim}
+
+\subparagraph{Compute mean fixation proportions for the two-variable
+version}\label{compute-mean-fixation-proportions-for-the-two-variable-version}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.means.twovar }\OtherTok{=}\NormalTok{ Rmisc}\SpecialCharTok{::}\FunctionTok{summarySE}\NormalTok{(fix.twovar, }\AttributeTok{measurevar=}\StringTok{\textquotesingle{}FixP\textquotesingle{}}\NormalTok{, }\AttributeTok{groupvars=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}TimeMS\_adjusted\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}SpeakerType\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Determiner\textquotesingle{}}\NormalTok{), }\AttributeTok{na.rm=}\NormalTok{T)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in qt(conf.interval/2 + 0.5, datac$N - 1): NaNs produced
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.means.twovar }\OtherTok{=}\NormalTok{ fix.means.twovar }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate\_at}\NormalTok{(}\FunctionTok{vars}\NormalTok{(SpeakerType, Determiner), as.factor)}
+
+\FunctionTok{summary}\NormalTok{(fix.means.twovar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  TimeMS_adjusted   SpeakerType        AOI            Determiner  
+##  Min.   :-2670.0   1:2674      NonTarget:2793   Definite  :2792  
+##  1st Qu.: -900.0   2:2912      Target   :2793   Possessive:2794  
+##  Median :  850.0                                                 
+##  Mean   :  853.9                                                 
+##  3rd Qu.: 2590.0                                                 
+##  Max.   : 4750.0                                                 
+##                                                                  
+##        N              FixP              sd               se         
+##  Min.   :  1.0   Min.   :0.0000   Min.   :0.0000   Min.   :0.00000  
+##  1st Qu.:256.0   1st Qu.:0.2891   1st Qu.:0.3629   1st Qu.:0.02152  
+##  Median :285.0   Median :0.5000   Median :0.4597   Median :0.02706  
+##  Mean   :261.9   Mean   :0.5000   Mean   :0.4136   Mean   :0.02904  
+##  3rd Qu.:303.0   3rd Qu.:0.7109   3rd Qu.:0.4802   3rd Qu.:0.02918  
+##  Max.   :364.0   Max.   :1.0000   Max.   :0.5774   Max.   :0.33333  
+##                                   NA's   :88       NA's   :88       
+##        ci         
+##  Min.   :0.00000  
+##  1st Qu.:0.04236  
+##  Median :0.05324  
+##  Mean   :0.06087  
+##  3rd Qu.:0.05745  
+##  Max.   :1.43422  
+##  NA's   :88
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(fix.means.twovar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   TimeMS_adjusted SpeakerType       AOI Determiner N FixP sd se ci
+## 1           -2670           1 NonTarget   Definite 5    0  0  0  0
+## 2           -2670           1    Target   Definite 5    1  0  0  0
+## 3           -2670           2 NonTarget   Definite 4    0  0  0  0
+## 4           -2670           2    Target   Definite 4    1  0  0  0
+## 5           -2660           1 NonTarget   Definite 5    0  0  0  0
+## 6           -2660           1    Target   Definite 5    1  0  0  0
+\end{verbatim}
+
+\subparagraph{Plot mean fixation proportion vs.~time with the
+two-variable version of the
+data}\label{plot-mean-fixation-proportion-vs.-time-with-the-two-variable-version-of-the-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.plot.twovar }\OtherTok{=} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{Determiner }\SpecialCharTok{+}\NormalTok{ SpeakerType, }\AttributeTok{ncol=}\DecValTok{2}\NormalTok{,}
+             \AttributeTok{labeller =} \FunctionTok{labeller}\NormalTok{(}
+              \AttributeTok{Determiner =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"Definite"} \OtherTok{=} \StringTok{"Definite determiner"}\NormalTok{,}
+                \StringTok{"Possessive"} \OtherTok{=} \StringTok{"Possessive determiner"}
+\NormalTok{              ),}
+              \AttributeTok{SpeakerType =} \FunctionTok{c}\NormalTok{(}
+                \StringTok{"1"} \OtherTok{=} \StringTok{"ASI"}\NormalTok{,}
+                \StringTok{"2"} \OtherTok{=} \StringTok{"HSS"}
+\NormalTok{              )}
+\NormalTok{            )}
+\NormalTok{             ) }\SpecialCharTok{+} \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+} 
+  \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.twovar,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted, }\AttributeTok{y=}\NormalTok{FixP, }\AttributeTok{group=}\NormalTok{AOI, }\AttributeTok{colour=}\NormalTok{AOI, }\AttributeTok{lty=}\NormalTok{AOI), }\AttributeTok{lwd=}\FloatTok{1.5}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data=}\NormalTok{fix.means.twovar,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{TimeMS\_adjusted,}\AttributeTok{ymin=}\NormalTok{FixP}\SpecialCharTok{{-}}\NormalTok{se,}\AttributeTok{ymax=}\NormalTok{FixP}\SpecialCharTok{+}\NormalTok{se,}\AttributeTok{color=}\NormalTok{AOI,}\AttributeTok{fill=}\NormalTok{AOI), }\AttributeTok{linewidth=}\NormalTok{.}\DecValTok{2}\NormalTok{, }\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{, }\AttributeTok{lty=}\StringTok{"dashed"}\NormalTok{, }\AttributeTok{show.legend=}\NormalTok{F)  }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{y=}\StringTok{"Fixation Proportion"}\NormalTok{, }\AttributeTok{x=}\StringTok{"Time relative to the target word onset (ms)"}\NormalTok{) }\SpecialCharTok{+} 
+  
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{limits=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{),}\AttributeTok{expand=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{),}\AttributeTok{breaks=}\FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{300}\NormalTok{, }\DecValTok{1400}\NormalTok{, }\DecValTok{200}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_color\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#969798"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"\#969798"}\NormalTok{,}\StringTok{"\#ffac00"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{scale\_linetype\_manual}\NormalTok{(}\StringTok{\textquotesingle{}AOI\textquotesingle{}}\NormalTok{, }\AttributeTok{values=}\FunctionTok{c}\NormalTok{(}\StringTok{"solid"}\NormalTok{,}\StringTok{"dotted"}\NormalTok{)) }\SpecialCharTok{+}
+  
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{text=}\FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size=}\DecValTok{20}\NormalTok{),}
+    \AttributeTok{legend.key.height=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{3}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{legend.key.width=}\FunctionTok{unit}\NormalTok{(.}\DecValTok{6}\NormalTok{,}\StringTok{"in"}\NormalTok{),}
+    \AttributeTok{panel.spacing=}\FunctionTok{unit}\NormalTok{(}\DecValTok{1}\NormalTok{, }\StringTok{"in"}\NormalTok{)) }
+
+\NormalTok{fix.plot.twovar}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1124 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DPA_files/figure-latex/unnamed-chunk-29-1.pdf}}
+
+\subparagraph{Save the plot}\label{save-the-plot-4}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"plots/fixation\_plot\_twovar.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{20}\NormalTok{, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1124 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\subsubsection{3. DPA}\label{dpa}
+
+Here we will run a by-participant analysis testing the divergence
+between the Target and NonTarget AOIs.
+
+\subparagraph{Select time window and create stratification
+variables}\label{select-time-window-and-create-stratification-variables}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{div.dat }\OtherTok{=}\NormalTok{ fix.twovar }\SpecialCharTok{\%\textgreater{}\%}  
+  \FunctionTok{filter}\NormalTok{(}\DecValTok{1400}\SpecialCharTok{\textgreater{}=}\NormalTok{TimeMS\_adjusted }\SpecialCharTok{\&}\NormalTok{ TimeMS\_adjusted}\SpecialCharTok{\textgreater{}={-}}\DecValTok{300}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
+\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{mutate}\NormalTok{(}\AttributeTok{StrataVars=}\FunctionTok{paste}\NormalTok{(Participant, AOI, TimeMS\_adjusted, }\AttributeTok{sep=}\StringTok{\textquotesingle{}\textquotesingle{}}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{mutate\_at}\NormalTok{(}\FunctionTok{vars}\NormalTok{(SpeakerType, StrataVars),as.factor) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{droplevels}\NormalTok{()}
+
+\FunctionTok{summary}\NormalTok{(div.dat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       ...1            TOI            Participant          Timeline        
+##  Min.   :    85   Length:393148      Length:393148      Length:393148     
+##  1st Qu.:187259   Class :character   Class :character   Class :character  
+##  Median :372068   Mode  :character   Mode  :character   Mode  :character  
+##  Mean   :369144                                                           
+##  3rd Qu.:553190                                                           
+##  Max.   :732480                                                           
+##                                                                           
+##       Bin         Bin_duration     TimeMS      Animacy_C        
+##  Min.   :211.0   Min.   :10    Min.   :2110   Length:393148     
+##  1st Qu.:265.0   1st Qu.:10    1st Qu.:2650   Class :character  
+##  Median :307.0   Median :10    Median :3070   Mode  :character  
+##  Mean   :306.1   Mean   :10    Mean   :3061                     
+##  3rd Qu.:347.0   3rd Qu.:10    3rd Qu.:3470                     
+##  Max.   :408.0   Max.   :10    Max.   :4080                     
+##                                                                 
+##   Animacy_D          Animacy_T          Determiner         N_ending_C       
+##  Length:393148      Length:393148      Length:393148      Length:393148     
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_ending_D         N_ending_T         N_Gender_C         N_Gender_D       
+##  Length:393148      Length:393148      Length:393148      Length:393148     
+##  Class :character   Class :character   Class :character   Class :character  
+##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+##                                                                             
+##                                                                             
+##                                                                             
+##                                                                             
+##   N_Gender_T        Phonol_Overlap_C   Phonol_Overlap_D Phonol_Overlap_T  
+##  Length:393148      Length:393148      Mode:logical     Length:393148     
+##  Class :character   Class :character   NA's:393148      Class :character  
+##  Mode  :character   Mode  :character                    Mode  :character  
+##                                                                           
+##                                                                           
+##                                                                           
+##                                                                           
+##   ArticleOnset    NounOnset     EndingOnset    EndingOffset    Remaining   
+##  Min.   :2403   Min.   :2496   Min.   :2591   Min.   :2838   Min.   :3005  
+##  1st Qu.:2450   1st Qu.:2576   1st Qu.:2762   1st Qu.:3020   1st Qu.:3144  
+##  Median :2479   Median :2614   Median :2871   Median :3079   Median :3243  
+##  Mean   :2491   Mean   :2620   Mean   :2879   Mean   :3108   Mean   :3240  
+##  3rd Qu.:2524   3rd Qu.:2669   3rd Qu.:2974   3rd Qu.:3196   3rd Qu.:3315  
+##  Max.   :2679   Max.   :2807   Max.   :3411   Max.   :3546   Max.   :3656  
+##                                                                            
+##  SpeakerType     Sex                 Age          Position        
+##  1:183908    Length:393148      Min.   :19.00   Length:393148     
+##  2:209240    Class :character   1st Qu.:20.00   Class :character  
+##              Mode  :character   Median :23.00   Mode  :character  
+##                                 Mean   :23.79                     
+##                                 3rd Qu.:25.00                     
+##                                 Max.   :50.00                     
+##                                 NA's   :77128                     
+##  Trackloss       TimeMS_adjusted  ArticleOnset_adjusted NounOnset_adjusted
+##  Mode :logical   Min.   :-300.0   Min.   :0             Min.   : 70.0     
+##  FALSE:393148    1st Qu.: 160.0   1st Qu.:0             1st Qu.:113.0     
+##                  Median : 580.0   Median :0             Median :128.0     
+##                  Mean   : 564.7   Mean   :0             Mean   :128.4     
+##                  3rd Qu.: 980.0   3rd Qu.:0             3rd Qu.:144.0     
+##                  Max.   :1400.0   Max.   :0             Max.   :202.0     
+##                                                                           
+##  EndingOnset_adjusted EndingOffset_adjusted Remaining_adjusted
+##  Min.   :170.0        Min.   :365           Min.   : 540.0    
+##  1st Qu.:276.0        1st Qu.:544           1st Qu.: 668.0    
+##  Median :388.0        Median :594           Median : 739.0    
+##  Mean   :387.4        Mean   :617           Mean   : 749.4    
+##  3rd Qu.:459.0        3rd Qu.:694           3rd Qu.: 818.0    
+##  Max.   :773.0        Max.   :908           Max.   :1018.0    
+##                                                               
+##  GenderMatchTarget_D    AreaFixated     GenderMatch               AOI        
+##  Min.   :0.0000      NonTarget:192712   Length:393148      NonTarget:196574  
+##  1st Qu.:0.0000      Target   :200436   Class :character   Target   :196574  
+##  Median :1.0000                         Mode  :character                     
+##  Mean   :0.5224                                                              
+##  3rd Qu.:1.0000                                                              
+##  Max.   :1.0000                                                              
+##                                                                              
+##       FixP          Phonol_Overlap                StrataVars    
+##  Min.   :0.0   NonMinPair  :260806   TA141NonTarget890 :    48  
+##  1st Qu.:0.0   Minimal Pair:132342   TA141NonTarget960 :    48  
+##  Median :0.5                         TA141Target890    :    48  
+##  Mean   :0.5                         TA141Target960    :    48  
+##  3rd Qu.:1.0                         TA105NonTarget1080:    47  
+##  Max.   :1.0                         TA105NonTarget1110:    47  
+##                                      (Other)           :392862
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(div.dat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 6 x 43
+##    ...1 TOI   Participant Timeline   Bin Bin_duration TimeMS Animacy_C Animacy_D
+##   <dbl> <chr> <chr>       <chr>    <dbl>        <dbl>  <dbl> <chr>     <chr>    
+## 1    85 Tria~ TA105       VersionA   324           10   3240 Animate-~ Animate-~
+## 2    85 Tria~ TA105       VersionA   324           10   3240 Animate-~ Animate-~
+## 3    86 Tria~ TA105       VersionA   325           10   3250 Animate-~ Animate-~
+## 4    86 Tria~ TA105       VersionA   325           10   3250 Animate-~ Animate-~
+## 5    87 Tria~ TA105       VersionA   326           10   3260 Animate-~ Animate-~
+## 6    87 Tria~ TA105       VersionA   326           10   3260 Animate-~ Animate-~
+## # i 34 more variables: Animacy_T <chr>, Determiner <chr>, N_ending_C <chr>,
+## #   N_ending_D <chr>, N_ending_T <chr>, N_Gender_C <chr>, N_Gender_D <chr>,
+## #   N_Gender_T <chr>, Phonol_Overlap_C <chr>, Phonol_Overlap_D <lgl>,
+## #   Phonol_Overlap_T <chr>, ArticleOnset <dbl>, NounOnset <dbl>,
+## #   EndingOnset <dbl>, EndingOffset <dbl>, Remaining <dbl>, SpeakerType <fct>,
+## #   Sex <chr>, Age <dbl>, Position <chr>, Trackloss <lgl>,
+## #   TimeMS_adjusted <dbl>, ArticleOnset_adjusted <dbl>, ...
+\end{verbatim}
+
+\subparagraph{Create two subsets based on the type of
+determiner}\label{create-two-subsets-based-on-the-type-of-determiner}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{div.dat.def }\OtherTok{\textless{}{-}}\NormalTok{ div.dat }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(Determiner }\SpecialCharTok{==} \StringTok{"Definite"}\NormalTok{)}
+\NormalTok{div.dat.pos }\OtherTok{\textless{}{-}}\NormalTok{ div.dat }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(Determiner }\SpecialCharTok{==} \StringTok{"Possessive"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Define bootstrap functions to compute a divergence point
+for the target vs.~unrelated
+conditions}\label{define-bootstrap-functions-to-compute-a-divergence-point-for-the-target-vs.-unrelated-conditions}
+
+Number of consecutive statistically significant time bins required to
+establish divergence, and number of bootstrap iterations
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Nbins }\OtherTok{=} \DecValTok{20}
+\NormalTok{Niter }\OtherTok{=} \DecValTok{100}\DataTypeTok{L}
+\end{Highlighting}
+\end{Shaded}
+
+Bootstrap function using lmer
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{boot\_L1L2\_lmer }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(original\_data, resample\_indices)\{}
+\NormalTok{  dat }\OtherTok{=}\NormalTok{ original\_data[resample\_indices, ]}
+  
+  \CommentTok{\# a statistical test at each timepoint for each group}
+\NormalTok{  test\_g1 }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# t{-}test for L1 group}
+    \FunctionTok{subset}\NormalTok{(SpeakerType }\SpecialCharTok{==} \DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{    dplyr}\SpecialCharTok{::}\FunctionTok{summarise}\NormalTok{(}\AttributeTok{t =} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lmer}\NormalTok{(FixP }\SpecialCharTok{\textasciitilde{}}\NormalTok{ AOI }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{Participant)))}\SpecialCharTok{$}\NormalTok{coefficients[}\StringTok{"AOITarget"}\NormalTok{, }\StringTok{"t value"}\NormalTok{])}
+
+\NormalTok{  test\_g2 }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# t{-}test for L2 group}
+    \FunctionTok{subset}\NormalTok{(SpeakerType }\SpecialCharTok{==} \DecValTok{2}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{    dplyr}\SpecialCharTok{::}\FunctionTok{summarise}\NormalTok{(}\AttributeTok{t =} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lmer}\NormalTok{(FixP }\SpecialCharTok{\textasciitilde{}}\NormalTok{ AOI }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{Participant)))}\SpecialCharTok{$}\NormalTok{coefficients[}\StringTok{"AOITarget"}\NormalTok{, }\StringTok{"t value"}\NormalTok{])}
+
+  \CommentTok{\# return a TRUE/FALSE vector of significant positive t{-}scores}
+  \CommentTok{\# (positive means more looks to the target than unrelated)}
+\NormalTok{  t\_g1 }\OtherTok{=}\NormalTok{ test\_g1}\SpecialCharTok{$}\NormalTok{t }\SpecialCharTok{\textgreater{}} \FloatTok{1.96}
+\NormalTok{  t\_g2 }\OtherTok{=}\NormalTok{ test\_g2}\SpecialCharTok{$}\NormalTok{t }\SpecialCharTok{\textgreater{}} \FloatTok{1.96}
+  
+  \CommentTok{\# create empty vectors to store onsets}
+\NormalTok{  onset\_g1 }\OtherTok{=}\NormalTok{ onset\_g2 }\OtherTok{=} \FunctionTok{c}\NormalTok{()}
+  
+  \CommentTok{\# find the index of the earliest run of sequential TRUEs; threshold is Nbins}
+  \ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{(}\FunctionTok{length}\NormalTok{(t\_g2)}\SpecialCharTok{{-}}\NormalTok{Nbins)) \{}
+\NormalTok{    onset\_g1[i] }\OtherTok{=} \FunctionTok{sum}\NormalTok{(t\_g1[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\NormalTok{Nbins}\DecValTok{{-}1}\NormalTok{)]) }\SpecialCharTok{==}\NormalTok{ Nbins}
+\NormalTok{    onset\_g2[i] }\OtherTok{=} \FunctionTok{sum}\NormalTok{(t\_g2[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\NormalTok{Nbins}\DecValTok{{-}1}\NormalTok{)]) }\SpecialCharTok{==}\NormalTok{ Nbins}
+\NormalTok{  \}}
+  
+  \CommentTok{\# find the difference between onsets}
+\NormalTok{  delta\_g1g2 }\OtherTok{=} \FunctionTok{which}\NormalTok{(onset\_g2)[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{which}\NormalTok{(onset\_g1)[}\DecValTok{1}\NormalTok{]}
+  
+  \CommentTok{\# print }
+  \CommentTok{\# note: the bootstrap returns the indices of the respective timepoints, not absolute times. }
+  \CommentTok{\# The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.}
+  \FunctionTok{c}\NormalTok{(delta\_g1g2,         }\CommentTok{\# onset difference L1 vs. L2 t[,1]}
+    \FunctionTok{which}\NormalTok{(onset\_g1)[}\DecValTok{1}\NormalTok{], }\CommentTok{\# onset bin for looks to target L1 t[,2]}
+    \FunctionTok{which}\NormalTok{(onset\_g2)[}\DecValTok{1}\NormalTok{])  }\CommentTok{\# onset bin for looks to target L2 t[,3]}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+Run the lmer bootstrap on the two subsets by determiner type
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{bootres\_L1L2\_lmer\_def }\OtherTok{=}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+  \AttributeTok{data =}\NormalTok{ div.dat.def,  }\CommentTok{\# data set to bootstrap       }
+  \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_lmer,  }\CommentTok{\# bootstrap function      }
+  \AttributeTok{strata =}\NormalTok{ div.dat.def}\SpecialCharTok{$}\NormalTok{StrataVars, }\CommentTok{\# stratification variable }
+  \AttributeTok{R =}\NormalTok{ Niter)  }\CommentTok{\# number of iterations}
+
+\NormalTok{bootres\_L1L2\_lmer\_pos }\OtherTok{=}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+  \AttributeTok{data =}\NormalTok{ div.dat.pos,  }\CommentTok{\# data set to bootstrap       }
+  \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_lmer,  }\CommentTok{\# bootstrap function      }
+  \AttributeTok{strata =}\NormalTok{ div.dat.pos}\SpecialCharTok{$}\NormalTok{StrataVars, }\CommentTok{\# stratification variable }
+  \AttributeTok{R =}\NormalTok{ Niter)  }\CommentTok{\# number of iterations}
+
+\NormalTok{bootres\_L1L2\_lmer\_def}
+\NormalTok{bootres\_L1L2\_lmer\_pos}
+\end{Highlighting}
+\end{Shaded}
+
+Save the lmer results
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{save}\NormalTok{(bootres\_L1L2\_lmer\_def, }\AttributeTok{file=}\StringTok{"DPA\_results.lmer.def.rds"}\NormalTok{)}
+\FunctionTok{save}\NormalTok{(bootres\_L1L2\_lmer\_pos, }\AttributeTok{file=}\StringTok{"DPA\_results.lmer.pos.rds"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Running the lmer bootstrap by
+trial}\label{running-the-lmer-bootstrap-by-trial}
+
+This ended up yielding mostly NAs due to the small sample size.
+
+Define a function that runs the bootstrap function for all the trials
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{run\_boot\_per\_trial }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(toi\_id, df, }\AttributeTok{Niter =} \DecValTok{100}\NormalTok{, }\AttributeTok{strata\_col =} \StringTok{"StrataVars"}\NormalTok{) \{}
+\NormalTok{  trial\_data }\OtherTok{\textless{}{-}}\NormalTok{ df }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(TOI }\SpecialCharTok{==}\NormalTok{ toi\_id) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{droplevels}\NormalTok{()}
+
+\NormalTok{  boot\_result }\OtherTok{\textless{}{-}}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ trial\_data,}
+    \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_glm,  }\CommentTok{\# your divergence function}
+    \AttributeTok{strata =}\NormalTok{ trial\_data[[strata\_col]],}
+    \AttributeTok{R =}\NormalTok{ Niter}
+\NormalTok{  )}
+
+  \CommentTok{\# Extract metadata from the first row (assuming Determiner etc. are constant per trial)}
+\NormalTok{  trial\_info }\OtherTok{\textless{}{-}}\NormalTok{ trial\_data }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{slice}\NormalTok{(}\DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{select}\NormalTok{(TOI, Determiner, Phonol\_Overlap, GenderMatch)  }\CommentTok{\# add more if needed}
+
+  \FunctionTok{list}\NormalTok{(}\AttributeTok{boot =}\NormalTok{ boot\_result, }\AttributeTok{info =}\NormalTok{ trial\_info)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+Run the function that runs the bootstrap function
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{trial\_ids }\OtherTok{\textless{}{-}} \FunctionTok{unique}\NormalTok{(div.dat}\SpecialCharTok{$}\NormalTok{TOI)}
+
+\CommentTok{\# Store both the bootstrap and metadata}
+\NormalTok{boot\_trials }\OtherTok{\textless{}{-}} \FunctionTok{lapply}\NormalTok{(trial\_ids, }\ControlFlowTok{function}\NormalTok{(toi) }\FunctionTok{run\_boot\_per\_trial}\NormalTok{(toi, div.dat, }\AttributeTok{Niter =} \DecValTok{100}\NormalTok{))}
+\FunctionTok{names}\NormalTok{(boot\_trials) }\OtherTok{\textless{}{-}}\NormalTok{ trial\_ids}
+\end{Highlighting}
+\end{Shaded}
+
+Extract divergence values + metadata into a summary dataframe
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Function to extract means and metadata}
+\NormalTok{extract\_div\_summary }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(result) \{}
+\NormalTok{  bootres }\OtherTok{\textless{}{-}}\NormalTok{ result}\SpecialCharTok{$}\NormalTok{boot}
+\NormalTok{  info }\OtherTok{\textless{}{-}}\NormalTok{ result}\SpecialCharTok{$}\NormalTok{info}
+
+\NormalTok{  tibble}\SpecialCharTok{::}\FunctionTok{tibble}\NormalTok{(}
+    \AttributeTok{TOI =}\NormalTok{ info}\SpecialCharTok{$}\NormalTok{TOI,}
+    \AttributeTok{Determiner =}\NormalTok{ info}\SpecialCharTok{$}\NormalTok{Determiner,}
+    \AttributeTok{Phonol\_Overlap =}\NormalTok{ info}\SpecialCharTok{$}\NormalTok{Phonol\_Overlap,}
+    \AttributeTok{GenderMatch =}\NormalTok{ info}\SpecialCharTok{$}\NormalTok{GenderMatchTarget\_D,}
+    \AttributeTok{ASI\_divergence =} \FunctionTok{mean}\NormalTok{(bootres}\SpecialCharTok{$}\NormalTok{t[,}\DecValTok{2}\NormalTok{], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{*} \DecValTok{10} \SpecialCharTok{{-}} \DecValTok{10}\NormalTok{,}
+    \AttributeTok{HSS\_divergence =} \FunctionTok{mean}\NormalTok{(bootres}\SpecialCharTok{$}\NormalTok{t[,}\DecValTok{3}\NormalTok{], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{*} \DecValTok{10} \SpecialCharTok{{-}} \DecValTok{10}
+\NormalTok{  )}
+\NormalTok{\}}
+
+\CommentTok{\# Build summary}
+\NormalTok{div\_summary\_df }\OtherTok{\textless{}{-}}\NormalTok{ purrr}\SpecialCharTok{::}\FunctionTok{map\_dfr}\NormalTok{(boot\_trials, extract\_div\_summary)}
+\end{Highlighting}
+\end{Shaded}
+
+Bootstrap function using glm (generalized linear model)
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{boot\_L1L2\_glm }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(original\_data, resample\_indices)\{}
+\NormalTok{  dat }\OtherTok{=}\NormalTok{ original\_data[resample\_indices, ]}
+  
+  \CommentTok{\# a statistical test at each timepoint for each group}
+\NormalTok{  test\_g1 }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# t{-}test for L1 group}
+    \FunctionTok{subset}\NormalTok{(SpeakerType }\SpecialCharTok{==} \DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{    dplyr}\SpecialCharTok{::}\FunctionTok{summarise}\NormalTok{(}\AttributeTok{t =} \FunctionTok{summary}\NormalTok{(}\FunctionTok{glm}\NormalTok{(FixP }\SpecialCharTok{\textasciitilde{}}\NormalTok{ AOI, }\AttributeTok{family =}\NormalTok{ binomial))}\SpecialCharTok{$}\NormalTok{coefficients[}\StringTok{"AOITarget"}\NormalTok{, }\StringTok{"z value"}\NormalTok{])}
+
+\NormalTok{  test\_g2 }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# t{-}test for L2 group}
+    \FunctionTok{subset}\NormalTok{(SpeakerType }\SpecialCharTok{==} \DecValTok{2}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{    dplyr}\SpecialCharTok{::}\FunctionTok{summarise}\NormalTok{(}\AttributeTok{t =} \FunctionTok{summary}\NormalTok{(}\FunctionTok{glm}\NormalTok{(FixP }\SpecialCharTok{\textasciitilde{}}\NormalTok{ AOI, }\AttributeTok{family =}\NormalTok{ binomial))}\SpecialCharTok{$}\NormalTok{coefficients[}\StringTok{"AOITarget"}\NormalTok{, }\StringTok{"z value"}\NormalTok{])}
+
+  \CommentTok{\# return a TRUE/FALSE vector of significant positive t{-}scores}
+  \CommentTok{\# (positive means more looks to the target than unrelated)}
+\NormalTok{  t\_g1 }\OtherTok{=}\NormalTok{ test\_g1}\SpecialCharTok{$}\NormalTok{t }\SpecialCharTok{\textgreater{}} \FloatTok{1.96}
+\NormalTok{  t\_g2 }\OtherTok{=}\NormalTok{ test\_g2}\SpecialCharTok{$}\NormalTok{t }\SpecialCharTok{\textgreater{}} \FloatTok{1.96}
+  
+  \CommentTok{\# create empty vectors to store onsets}
+\NormalTok{  onset\_g1 }\OtherTok{=}\NormalTok{ onset\_g2 }\OtherTok{=} \FunctionTok{c}\NormalTok{()}
+  
+  \CommentTok{\# find the index of the earliest run of sequential TRUEs; threshold is Nbins}
+  \ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{(}\FunctionTok{length}\NormalTok{(t\_g2)}\SpecialCharTok{{-}}\NormalTok{Nbins)) \{}
+\NormalTok{    onset\_g1[i] }\OtherTok{=} \FunctionTok{sum}\NormalTok{(t\_g1[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\NormalTok{Nbins}\DecValTok{{-}1}\NormalTok{)]) }\SpecialCharTok{==}\NormalTok{ Nbins}
+\NormalTok{    onset\_g2[i] }\OtherTok{=} \FunctionTok{sum}\NormalTok{(t\_g2[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\NormalTok{Nbins}\DecValTok{{-}1}\NormalTok{)]) }\SpecialCharTok{==}\NormalTok{ Nbins}
+\NormalTok{  \}}
+  
+  \CommentTok{\# find the difference between onsets}
+\NormalTok{  delta\_g1g2 }\OtherTok{=} \FunctionTok{which}\NormalTok{(onset\_g2)[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{which}\NormalTok{(onset\_g1)[}\DecValTok{1}\NormalTok{]}
+  
+  \CommentTok{\# print }
+  \CommentTok{\# note: the bootstrap returns the indices of the respective timepoints, not absolute times. }
+  \CommentTok{\# The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.}
+  \FunctionTok{c}\NormalTok{(delta\_g1g2,         }\CommentTok{\# onset difference L1 vs. L2 t[,1]}
+    \FunctionTok{which}\NormalTok{(onset\_g1)[}\DecValTok{1}\NormalTok{], }\CommentTok{\# onset bin for looks to target L1 t[,2]}
+    \FunctionTok{which}\NormalTok{(onset\_g2)[}\DecValTok{1}\NormalTok{])  }\CommentTok{\# onset bin for looks to target L2 t[,3]}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+Run the glm bootstrap on the two subsets by determiner type
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{bootres\_L1L2\_glm\_def }\OtherTok{=}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+  \AttributeTok{data =}\NormalTok{ div.dat.def,  }\CommentTok{\# data set to bootstrap       }
+  \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_glm,  }\CommentTok{\# bootstrap function      }
+  \AttributeTok{strata =}\NormalTok{ div.dat.def}\SpecialCharTok{$}\NormalTok{StrataVars, }\CommentTok{\# stratification variable }
+  \AttributeTok{R =}\NormalTok{ Niter)  }\CommentTok{\# number of iterations}
+
+\NormalTok{bootres\_L1L2\_glm\_pos }\OtherTok{=}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+  \AttributeTok{data =}\NormalTok{ div.dat.pos,  }\CommentTok{\# data set to bootstrap       }
+  \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_glm,  }\CommentTok{\# bootstrap function      }
+  \AttributeTok{strata =}\NormalTok{ div.dat.pos}\SpecialCharTok{$}\NormalTok{StrataVars, }\CommentTok{\# stratification variable }
+  \AttributeTok{R =}\NormalTok{ Niter)  }\CommentTok{\# number of iterations}
+
+\NormalTok{bootres\_L1L2\_glm\_def}
+\NormalTok{bootres\_L1L2\_glm\_pos}
+\end{Highlighting}
+\end{Shaded}
+
+Save the glm results
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{save}\NormalTok{(bootres\_L1L2\_glm\_def, }\AttributeTok{file=}\StringTok{"DPA\_results.glm.def.rds"}\NormalTok{)}
+\FunctionTok{save}\NormalTok{(bootres\_L1L2\_glm\_pos, }\AttributeTok{file=}\StringTok{"DPA\_results.glm.pos.rds"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Extracting and plotting the divergence
+points}\label{extracting-and-plotting-the-divergence-points}
+
+Load the lmer results
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{load}\NormalTok{(}\StringTok{"DPA\_results.lmer.def.rds"}\NormalTok{)}
+\FunctionTok{load}\NormalTok{(}\StringTok{"DPA\_results.lmer.pos.rds"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Load the glm results
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{load}\NormalTok{(}\StringTok{"DPA\_results.glm.def.rds"}\NormalTok{)}
+\FunctionTok{load}\NormalTok{(}\StringTok{"DPA\_results.glm.pos.rds"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Define function to extract divergence points and confidence intervals
+from bootstrapping results
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{get\_divergence\_ms }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(bootres, index) \{}
+  \CommentTok{\# index = 2 for ASI, 3 for HSS}
+\NormalTok{  mean\_bin }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(bootres}\SpecialCharTok{$}\NormalTok{t[, index], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{  ci\_bin }\OtherTok{\textless{}{-}}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot.ci}\NormalTok{(bootres, }\AttributeTok{index =}\NormalTok{ index, }\AttributeTok{type =} \StringTok{"perc"}\NormalTok{)}\SpecialCharTok{$}\NormalTok{percent[}\DecValTok{4}\SpecialCharTok{:}\DecValTok{5}\NormalTok{]}
+  
+\NormalTok{  mean\_ms }\OtherTok{\textless{}{-}}\NormalTok{ (mean\_bin }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{) }\SpecialCharTok{*} \DecValTok{10}
+\NormalTok{  ci\_ms }\OtherTok{\textless{}{-}}\NormalTok{ (ci\_bin }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{) }\SpecialCharTok{*} \DecValTok{10}
+  
+  \FunctionTok{list}\NormalTok{(}\AttributeTok{mean =}\NormalTok{ mean\_ms, }\AttributeTok{ci =}\NormalTok{ ci\_ms)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+Run the function on all the results
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Definite determiner}
+\NormalTok{def\_asi }\OtherTok{\textless{}{-}} \FunctionTok{get\_divergence\_ms}\NormalTok{(bootres\_L1L2\_lmer\_def, }\AttributeTok{index =} \DecValTok{2}\NormalTok{)}
+\NormalTok{def\_hss }\OtherTok{\textless{}{-}} \FunctionTok{get\_divergence\_ms}\NormalTok{(bootres\_L1L2\_lmer\_def, }\AttributeTok{index =} \DecValTok{3}\NormalTok{)}
+
+\CommentTok{\# Possessive determiner}
+\NormalTok{pos\_asi }\OtherTok{\textless{}{-}} \FunctionTok{get\_divergence\_ms}\NormalTok{(bootres\_L1L2\_lmer\_pos, }\AttributeTok{index =} \DecValTok{2}\NormalTok{)}
+\NormalTok{pos\_hss }\OtherTok{\textless{}{-}} \FunctionTok{get\_divergence\_ms}\NormalTok{(bootres\_L1L2\_lmer\_pos, }\AttributeTok{index =} \DecValTok{3}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Create dataframe for plotting
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{div\_df }\OtherTok{\textless{}{-}}\NormalTok{ tibble}\SpecialCharTok{::}\FunctionTok{tibble}\NormalTok{(}
+  \AttributeTok{Determiner =} \FunctionTok{c}\NormalTok{(}\StringTok{"Definite"}\NormalTok{, }\StringTok{"Definite"}\NormalTok{, }\StringTok{"Possessive"}\NormalTok{, }\StringTok{"Possessive"}\NormalTok{),}
+  \AttributeTok{SpeakerType =} \FunctionTok{c}\NormalTok{(}\StringTok{"1"}\NormalTok{, }\StringTok{"2"}\NormalTok{, }\StringTok{"1"}\NormalTok{, }\StringTok{"2"}\NormalTok{),}
+  \AttributeTok{TimeMS =} \FunctionTok{c}\NormalTok{(def\_asi}\SpecialCharTok{$}\NormalTok{mean, def\_hss}\SpecialCharTok{$}\NormalTok{mean, pos\_asi}\SpecialCharTok{$}\NormalTok{mean, pos\_hss}\SpecialCharTok{$}\NormalTok{mean),}
+  \AttributeTok{CI\_low =} \FunctionTok{c}\NormalTok{(def\_asi}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{1}\NormalTok{], def\_hss}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{1}\NormalTok{], pos\_asi}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{1}\NormalTok{], pos\_hss}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{1}\NormalTok{]),}
+  \AttributeTok{CI\_high =} \FunctionTok{c}\NormalTok{(def\_asi}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{2}\NormalTok{], def\_hss}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{2}\NormalTok{], pos\_asi}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{2}\NormalTok{], pos\_hss}\SpecialCharTok{$}\NormalTok{ci[}\DecValTok{2}\NormalTok{])}
+\NormalTok{)}
+
+\NormalTok{div\_df }\OtherTok{=}\NormalTok{ div\_df }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate\_at}\NormalTok{(}\FunctionTok{vars}\NormalTok{(SpeakerType, Determiner), as.factor)}
+
+\NormalTok{div\_df }\OtherTok{\textless{}{-}}\NormalTok{ div\_df }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste0}\NormalTok{(TimeMS, }\StringTok{" ms"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+Add divergence points and their confidence intervals to the two-variable
+plots
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fix.plot.twovar }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{data =}\NormalTok{ div\_df,}
+             \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ TimeMS, }\AttributeTok{y =} \FloatTok{0.48}\NormalTok{),}
+             \AttributeTok{shape =} \DecValTok{18}\NormalTok{, }\AttributeTok{size =} \DecValTok{4}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_errorbarh}\NormalTok{(}\AttributeTok{data =}\NormalTok{ div\_df,}
+                 \FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ CI\_low, }\AttributeTok{xmax =}\NormalTok{ CI\_high, }\AttributeTok{y =} \FloatTok{0.48}\NormalTok{),}
+                 \AttributeTok{height =} \FloatTok{0.02}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_text}\NormalTok{(}\AttributeTok{data =}\NormalTok{ div\_df,}
+          \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ TimeMS }\SpecialCharTok{{-}} \DecValTok{50}\NormalTok{, }\AttributeTok{y =} \FloatTok{0.55}\NormalTok{, }\AttributeTok{label =}\NormalTok{ label), }
+          \AttributeTok{size =} \DecValTok{10}\NormalTok{, }\AttributeTok{fontface=}\StringTok{"bold"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1124 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DPA_files/figure-latex/unnamed-chunk-48-1.pdf}}
+
+Save the plots
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"plots/fixation\_plot\_twovar\_divpts.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{20}\NormalTok{, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning: Removed 1124 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+\end{verbatim}
+
+\subsubsection{4. Group comparison}\label{group-comparison}
+
+We can compute a p-value for the group comparison by creating a
+bootstrap distribution of the null hypothesis. To do this, we will first
+pool the original data from both groups, randomly assign group labels,
+and then estimate a difference in divergence point. We will repeat this
+many times to obtain a distribution of divergence point that could be
+expected under the null hypothesis. We will obtain the p-value by
+calculating the proportion of samples from this null distribution that
+are larger than the observed difference in divergence point in the
+empirical data.
+
+Below, we will calculate a p-value for the group comparison (ASI vs.~HSS
+group). We will first define a bootstrap function.
+
+\subparagraph{Define the bootstrap function for group comparison (only
+lmer so
+far)}\label{define-the-bootstrap-function-for-group-comparison-only-lmer-so-far}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{boot\_L1L2\_pval }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(original\_data, resample\_indices)\{}
+\NormalTok{  dat\_resample }\OtherTok{=}\NormalTok{ original\_data[resample\_indices, ] }\CommentTok{\# resample the data}
+  
+\NormalTok{  dat }\OtherTok{=}\NormalTok{ dat\_resample }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{group\_by}\NormalTok{(Participant, AOI, TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{transform}\NormalTok{(}\AttributeTok{SpeakerType=}\FunctionTok{sample}\NormalTok{(SpeakerType,}\AttributeTok{replace=}\NormalTok{F)) }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# randomly assign group labels }
+    \FunctionTok{ungroup}\NormalTok{() }\CommentTok{\#\%\textgreater{}\% }
+  
+  \CommentTok{\# a statistical test at each timepoint for each group}
+\NormalTok{  test\_g1 }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# t{-}test for L1 group}
+    \FunctionTok{subset}\NormalTok{(SpeakerType }\SpecialCharTok{==} \DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{    dplyr}\SpecialCharTok{::}\FunctionTok{summarise}\NormalTok{(}\AttributeTok{t =} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lmer}\NormalTok{(FixP }\SpecialCharTok{\textasciitilde{}}\NormalTok{ AOI }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{Participant)))}\SpecialCharTok{$}\NormalTok{coefficients[}\StringTok{"AOITarget"}\NormalTok{, }\StringTok{"t value"}\NormalTok{])}
+
+\NormalTok{  test\_g2 }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \CommentTok{\# t{-}test for L2 group}
+    \FunctionTok{subset}\NormalTok{(SpeakerType }\SpecialCharTok{==} \DecValTok{2}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(TimeMS\_adjusted) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{    dplyr}\SpecialCharTok{::}\FunctionTok{summarise}\NormalTok{(}\AttributeTok{t =} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lmer}\NormalTok{(FixP }\SpecialCharTok{\textasciitilde{}}\NormalTok{ AOI }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{Participant)))}\SpecialCharTok{$}\NormalTok{coefficients[}\StringTok{"AOITarget"}\NormalTok{, }\StringTok{"t value"}\NormalTok{])}
+  
+  \CommentTok{\# return a TRUE/FALSE vector of significant positive t{-}scores  }
+  \CommentTok{\# (positive means more looks to the target than unrelated)}
+\NormalTok{  t\_g1 }\OtherTok{=}\NormalTok{ test\_g1}\SpecialCharTok{$}\NormalTok{t }\SpecialCharTok{\textgreater{}} \FloatTok{1.96}
+\NormalTok{  t\_g2 }\OtherTok{=}\NormalTok{ test\_g2}\SpecialCharTok{$}\NormalTok{t }\SpecialCharTok{\textgreater{}} \FloatTok{1.96}
+  
+  \CommentTok{\# create empty vectors to store onsets}
+\NormalTok{  onset\_g1 }\OtherTok{=}\NormalTok{ onset\_g2 }\OtherTok{=} \FunctionTok{c}\NormalTok{()}
+  
+  \CommentTok{\# find the index of the earliest run of 4 sequential TRUEs }
+  \ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{(}\FunctionTok{length}\NormalTok{(t\_g2)}\SpecialCharTok{{-}}\NormalTok{Nbins)) \{ }
+\NormalTok{    onset\_g1[i] }\OtherTok{=} \FunctionTok{sum}\NormalTok{(t\_g1[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\NormalTok{Nbins}\DecValTok{{-}1}\NormalTok{)]) }\SpecialCharTok{==}\NormalTok{ Nbins}
+\NormalTok{    onset\_g2[i] }\OtherTok{=} \FunctionTok{sum}\NormalTok{(t\_g2[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\NormalTok{Nbins}\DecValTok{{-}1}\NormalTok{)]) }\SpecialCharTok{==}\NormalTok{ Nbins}
+\NormalTok{  \}}
+  
+  \CommentTok{\# find the difference between onsets}
+\NormalTok{  delta\_g1g2 }\OtherTok{=} \FunctionTok{which}\NormalTok{(onset\_g2)[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{which}\NormalTok{(onset\_g1)[}\DecValTok{1}\NormalTok{]}
+  
+  \CommentTok{\# print }
+\NormalTok{  delta\_g1g2  }\CommentTok{\# onset difference L1 vs. L2 t[,1]}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Run the lmer bootstrap on the two subsets by determiner
+type}\label{run-the-lmer-bootstrap-on-the-two-subsets-by-determiner-type}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{bootres\_L1L2\_pval\_def }\OtherTok{=}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+  \AttributeTok{data =}\NormalTok{ div.dat.def,  }\CommentTok{\# data set to bootstrap       }
+  \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_pval,  }\CommentTok{\# bootstrap function      }
+  \AttributeTok{strata =}\NormalTok{ div.dat.def}\SpecialCharTok{$}\NormalTok{StrataVars, }\CommentTok{\# stratification variable }
+  \AttributeTok{R =}\NormalTok{ Niter)  }\CommentTok{\# number of iterations        }
+
+\NormalTok{bootres\_L1L2\_pval\_pos }\OtherTok{=}\NormalTok{ boot}\SpecialCharTok{::}\FunctionTok{boot}\NormalTok{(}
+  \AttributeTok{data =}\NormalTok{ div.dat.pos,  }\CommentTok{\# data set to bootstrap       }
+  \AttributeTok{statistic =}\NormalTok{ boot\_L1L2\_pval,  }\CommentTok{\# bootstrap function      }
+  \AttributeTok{strata =}\NormalTok{ div.dat.pos}\SpecialCharTok{$}\NormalTok{StrataVars, }\CommentTok{\# stratification variable }
+  \AttributeTok{R =}\NormalTok{ Niter)  }\CommentTok{\# number of iterations   }
+
+\NormalTok{bootres\_L1L2\_pval\_def}
+\NormalTok{bootres\_L1L2\_pval\_pos}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Save the group comparison
+results}\label{save-the-group-comparison-results}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{save}\NormalTok{(bootres\_L1L2\_pval, }\AttributeTok{file=}\StringTok{"DPA\_results.pval.def.rds"}\NormalTok{)}
+\FunctionTok{save}\NormalTok{(bootres\_L1L2\_pval, }\AttributeTok{file=}\StringTok{"DPA\_results.pval.pos.rds"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{If we already have saved results, we can load
+them.}\label{if-we-already-have-saved-results-we-can-load-them.}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{load}\NormalTok{(}\StringTok{"DPA\_results.pval.def.rds"}\NormalTok{)}
+\FunctionTok{load}\NormalTok{(}\StringTok{"DPA\_results.pval.pos.rds"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subparagraph{Compute the p-values}\label{compute-the-p-values}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pval.def }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\FunctionTok{mean}\NormalTok{(bootres\_L1L2\_pval\_def}\SpecialCharTok{$}\NormalTok{t[,}\DecValTok{1}\NormalTok{]}\SpecialCharTok{\textgreater{}=}\NormalTok{bootres\_L1L2\_lmer\_def}\SpecialCharTok{$}\NormalTok{t0[}\DecValTok{1}\NormalTok{], }\AttributeTok{na.rm=}\NormalTok{T), }\DecValTok{5}\NormalTok{)        }
+\NormalTok{pval.pos }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\FunctionTok{mean}\NormalTok{(bootres\_L1L2\_pval\_pos}\SpecialCharTok{$}\NormalTok{t[,}\DecValTok{1}\NormalTok{]}\SpecialCharTok{\textgreater{}=}\NormalTok{bootres\_L1L2\_lmer\_pos}\SpecialCharTok{$}\NormalTok{t0[}\DecValTok{1}\NormalTok{], }\AttributeTok{na.rm=}\NormalTok{T), }\DecValTok{5}\NormalTok{) }
+
+\NormalTok{pval.def}
+\NormalTok{pval.pos}
+\end{Highlighting}
+\end{Shaded}
+
+
+\end{document}
