@@ -1,0 +1,889 @@
+---
+title: "DPA"
+output:
+  html_document: default
+  pdf_document: default
+date: "2025-05-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Divergence Point Analysis on Eye-tracking Data
+
+This R script generates timecourse plots of mean fixation proportion, and performs a statistical analysis to determine divergence points between fixations on different objects. It is adapted from the R script in the paper "Analysing data from the psycholinguistic visual‑world paradigm: Comparison of different analysis methods", Ito & Knoeferle (2023).
+
+The columns in the original eye-tracking data set are:
+
+-   TOI: trial of interest
+
+-   Participant: the code for a participant
+
+-   Timeline: the version of the experiment
+
+-   Bin: the number of the time bin for one participant and trial
+
+-   Bin_duration: the duration of each time bin
+
+-   Competitor: binomially coded fixation data - 1=fixation on competitor object in the current time bin; 0=fixation elsewhere
+
+-   Distractor: binomially coded fixation data - 1=fixation on distractor object in the current time bin; 0=fixation elsewhere
+
+-   Target: binomially coded fixation data - 1=fixation on target object in the current time bin; 0=fixation elsewhere
+
+-   TimeMS: the time bin converted to time in milliseconds
+
+-   Animacy_C: the animacy of the competitor noun
+
+-   Animacy_D: the animacy of the distractor noun
+
+-   Animacy_T: the animacy of the target noun
+
+-   Determiner: the type of determiner in the trial (Definite or Possessive)
+
+-   N_Gender_C: the lexical gender of the competitor noun (Masculine or Feminine)
+
+-   N_Gender_D: the lexical gender of the distractor noun (Masculine or Feminine)
+
+-   N_Gender_T: the lexical gender of the target noun (Masculine or Feminine)
+
+-   Phonol_Overlap_C: whether the competitor noun has a minimal pair that only differs in the word-final vowel and lexical gender
+
+-   Phonol_Overlap_D: whether the distractor noun has a minimal pair that only differs in the word-final vowel and lexical gender
+
+-   Phonol_Overlap_T: whether the target noun has a minimal pair that only differs in the word-final vowel and lexical gender
+
+-   ArticleOnset: the onset time (in milliseconds) of the determiner in the audio cue of the current trial
+
+-   NounOnset: the onset time (in milliseconds) of the noun in the audio cue of the current trial
+
+-   EndingOnset: the onset time (in milliseconds) of the noun's final vowel in the audio cue of the current trial
+
+-   EndingOffset: the offset time (in milliseconds) of the noun's final vowel in the audio cue of the current trial
+
+-   Remaining: the remaining time after the offset of the audio cue of the current trial
+
+-   SpeakerType: the bilingual status of participant - 1 (Adult Spanish Immigrant) or 2 (Heritage Spanish Speaker)
+
+-   Sex: the sex of the participant (Femenino or Masculino)
+
+-   Age: the age of the participant
+
+-   Position: the position of the object in fixation (top left, bottom centre, top right)
+
+-   Trackloss: whether the fixation is in blank space or off screen, or there is a blink in the current time bin (TRUE or FALSE)
+
+-   TimeMS_adjusted: TimeMS zeroed at ArticleOnset
+
+-   ArticleOnset_adjusted: ArticleOnset zeroed at ArticleOnset (thus always 0)
+
+-   NounOnset_adjusted: NounOnset zeroed at ArticleOnset
+
+-   EndingOnset_adjusted: EndingOnset zeroed at ArticleOnset
+
+-   EndingOffset_adjusted: EndingOffset zeroed at ArticleOnset
+
+-   Remaining_adjusted: Remaining zeroed at ArticleOnset
+
+### 1. Data preparation
+
+```{r eval=T, echo=T, message=F}
+rm(list = ls()) # Clear the workspace
+options(scipen = 999) # Turn off scientific notation
+```
+
+##### Packages
+
+```{r eval=T, message=F}
+require(Rmisc)
+require(tidyverse)
+require(ggplot2)
+require(boot)
+require(dplyr)
+require(lme4)
+```
+
+##### Package versions
+
+```{r echo=F}
+installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
+```
+
+##### Read the time-course output data of the eyetracker from file
+
+```{r eval=T, message=F}
+fix.dat = read_delim("/Users/cindyzhang/Desktop/Spanish Gender Project/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
+# all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
+```
+
+##### Inspect the raw data
+
+```{r eval=T, message=F}
+summary(fix.dat)
+head(fix.dat)
+```
+
+##### Remove rows where the time bins are not 10ms
+
+```{r eval=T, message=F}
+fix.dat <- fix.dat %>% filter(Bin_duration == 10)
+```
+
+##### Add AreaFixated column
+
+```{r eval=T, message=F}
+fix.dat <- fix.dat %>%
+  mutate(AreaFixated = case_when(
+    Competitor == 1 ~ "Competitor",
+    Distractor == 1 ~ "Distractor",
+    Target == 1 ~ "Target"
+  ))
+```
+
+##### Add GenderMatch column
+
+```{r eval=T, echo=T, message=F}
+fix.dat <- fix.dat %>%
+  mutate(GenderMatch = case_when(
+    N_Gender_D == N_Gender_T ~ "D=T",
+    N_Gender_D == N_Gender_C ~ "D=C"
+  ))
+```
+
+##### Reshape binomially encoded fixation data to a long format for plotting and analysis
+
+In the original experiment, the eyetracker takes 25 samples in each 50ms bin, and records the proportion of samples that fall in each AOI. Our eyetracker takes 1 sample in each 10ms bin, and records *which* AOI the sample falls in (we already removed the trackloss bins, so the sample must be in one of the 3 AOIs, and binomially encoded as 0 or 1).
+
+```{r eval=T, echo=T, message=F}
+fix.long <- fix.dat %>%
+  pivot_longer(
+    cols = c(Target, Competitor, Distractor),
+    names_to = "AOI",
+    values_to = "FixP"
+  )
+```
+
+##### Change `Participant`, `TOI`, `AreaFixated`, `SpeakerType`, `AOI`, `Phonol_Overlap_T` and `GenderMatch` to factor
+
+```{r eval=T, echo=T, message=F}
+fix.long = fix.long %>% mutate_at(vars(Participant, TOI, AreaFixated, SpeakerType, AOI, Phonol_Overlap_T, GenderMatch), as.factor)
+```
+
+##### Merge the non minimal pair values
+
+```{r eval=T, echo=T, message=F}
+fix.long$Phonol_Overlap <- fix.long$Phonol_Overlap_T %>% fct_collapse(NonMinPair = c("First Syll-unstressed", "First Syll-stressed"))
+```
+
+##### Inspect the data after factoring
+
+```{r eval=T, echo=T, message=F}
+head(fix.long)
+summary(fix.long)
+```
+
+##### Compute the mean, SD, SE and CI for `FixP` for each time bin, AOI, SpeakerType, Determiner and TOI
+
+```{r eval=T, echo=T, message=F}
+fix.means = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner'), na.rm=T)
+
+head(fix.means)
+summary(fix.means)
+```
+
+##### Compute Mean, etc. that takes Phonol_Overlap into account
+
+```{r eval=T, echo=T, message=F}
+fix.means.phonol = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner', 'Phonol_Overlap'), na.rm=T)
+
+head(fix.means.phonol)
+summary(fix.means.phonol)
+```
+
+##### Compute Mean, etc. that takes Phonol_Overlap AND GenderMatch into account
+
+```{r eval=T, echo=T, message=F}
+fix.means.fourgroups = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner', 'Phonol_Overlap', 'GenderMatch'), na.rm=T)
+
+head(fix.means.fourgroups)
+summary(fix.means.fourgroups)
+```
+
+##### Compute Mean, etc. that takes GenderMatch into account
+
+```{r eval=T, echo=T, message=F}
+fix.means.gendermatch = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner', 'GenderMatch'), na.rm=T)
+
+head(fix.means.gendermatch)
+summary(fix.means.gendermatch)
+```
+
+### 2. Plotting
+
+##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS) and Determiner type (Definite and Possessive)
+
+```{r eval=T, echo=T, message=F, fig.width=12}
+fix.plot = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType, ncol=2,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              )
+            )
+             ) + theme_bw() + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 0.8) +
+  geom_line(data=fix.means,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) + # TODO use SE or CI here?
+  geom_ribbon(data=fix.means,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_fill_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot
+```
+
+##### Save the plot
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot.png", width = 20, height = 15, dpi = 300)
+```
+
+##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite and Possessive) and Phonological Overlap (Minimal Pair and Non Minimal Pair)
+
+```{r eval=T, echo=T, message=F, fig.width=20, fig.height=12}
+fix.plot.phonol = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType + Phonol_Overlap, ncol=4,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              ),
+              Phonol_Overlap = c(
+                "Minimal Pair" = "Minimal Pair",
+                "NonMinPair" = "Non Minimal Pair"
+              )
+            )
+             ) + theme_bw() + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 0.8) +
+  geom_line(data=fix.means.phonol,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) + # TODO use SE or CI here?
+  geom_ribbon(data=fix.means.phonol,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_fill_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.phonol
+```
+
+##### Save the plot
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot_phonol.png", width = 40, height = 15, dpi = 300)
+```
+
+##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite and Possessive), Phonological Overlap (Minimal Pair and Non Minimal Pair) and GenderMatch (D=T and D=C)
+
+```{r eval=T, echo=T, message=F, fig.width=20, fig.height=24}
+fix.plot.fourgroups = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType + Phonol_Overlap + GenderMatch, ncol=4,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              ),
+              Phonol_Overlap = c(
+                "Minimal Pair" = "Minimal Pair",
+                "NonMinPair" = "Non Minimal Pair"
+              ),
+              GenderMatch = c(
+                "D=T" = "Distractor = Target",
+                "D=C" = "Distractor = Competitor"
+              )
+            )
+             ) + theme_bw() + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 0.8) +
+  geom_line(data=fix.means.fourgroups,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) + # TODO use SE or CI here?
+  geom_ribbon(data=fix.means.fourgroups,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_fill_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.fourgroups
+```
+
+##### Save the plot
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot_fourgroups.png", width = 40, height = 30, dpi = 300)
+```
+
+##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite and Possessive) and GenderMatch (D=T and D=C)
+
+```{r eval=T, echo=T, message=F, fig.width=20, fig.height=12}
+fix.plot.gendermatch = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType + GenderMatch, ncol=4,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              ),
+              GenderMatch = c(
+                "D=T" = "Distractor = Target",
+                "D=C" = "Distractor = Competitor"
+              )
+            )
+             ) + theme_bw() + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 0.8) +
+  geom_line(data=fix.means.gendermatch,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) + # TODO use SE or CI here?
+  geom_ribbon(data=fix.means.gendermatch,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_fill_manual('AOI', values=c("#af2013","#002e65","#ffac00")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.gendermatch
+```
+
+##### Save the plot
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot_gendermatch.png", width = 40, height = 15, dpi = 300)
+```
+
+##### Combine Competitor and Distractor to create NonTarget columns and reduce the data set to two variables
+
+```{r eval=T, message=F}
+fix.twovar <- fix.dat %>%
+  mutate(NonTarget = Competitor + Distractor) %>%
+  select(-Competitor, -Distractor)
+
+fix.twovar <- fix.twovar %>%
+  mutate(AreaFixated = ifelse(AreaFixated == "Target", "Target", "NonTarget"))
+
+fix.twovar$AreaFixated <- as.factor(fix.twovar$AreaFixated)
+```
+
+##### Pivot binomially encoded columns
+
+```{r eval=T, message=F}
+fix.twovar <- fix.twovar %>%
+  pivot_longer(
+    cols = c(Target, NonTarget),
+    names_to = "AOI",
+    values_to = "FixP"
+  )
+
+fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
+```
+
+##### Merge the non minimal pair values
+
+```{r eval=T, echo=T, message=F}
+fix.twovar$Phonol_Overlap <- fix.twovar$Phonol_Overlap_T %>% fct_collapse(NonMinPair = c("First Syll-unstressed", "First Syll-stressed"))
+
+summary(fix.twovar)
+head(fix.twovar)
+```
+
+##### Compute mean fixation proportions for the two-variable version
+
+```{r eval=T, echo=T, message=F}
+fix.means.twovar = Rmisc::summarySE(fix.twovar, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner'), na.rm=T)
+
+fix.means.twovar = fix.means.twovar %>% mutate_at(vars(SpeakerType, Determiner), as.factor)
+
+summary(fix.means.twovar)
+head(fix.means.twovar)
+```
+
+##### Plot mean fixation proportion vs. time with the two-variable version of the data
+
+```{r eval=T, echo=T, message=F, fig.width = 12}
+fix.plot.twovar = ggplot() + 
+  facet_wrap(~Determiner + SpeakerType, ncol=2,
+             labeller = labeller(
+              Determiner = c(
+                "Definite" = "Definite determiner",
+                "Possessive" = "Possessive determiner"
+              ),
+              SpeakerType = c(
+                "1" = "ASI",
+                "2" = "HSS"
+              )
+            )
+             ) + theme_bw() + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 0.8) +
+  geom_line(data=fix.means.twovar,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means.twovar,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("#969798","#ffac00")) +
+  scale_fill_manual('AOI', values=c("#969798","#ffac00")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.twovar
+```
+
+##### Save the plot
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot_twovar.png", width = 20, height = 15, dpi = 300)
+```
+
+### 3. DPA
+
+Here we will run a by-participant analysis testing the divergence between the Target and NonTarget AOIs.
+
+##### Select time window and create stratification variables
+
+```{r eval=T, echo=T, message=F}
+div.dat = fix.twovar %>%  
+  filter(1400>=TimeMS_adjusted & TimeMS_adjusted>=-300) %>% 
+  dplyr::mutate(StrataVars=paste(Participant, AOI, TimeMS_adjusted, sep='')) %>% 
+  mutate_at(vars(SpeakerType, StrataVars),as.factor) %>% 
+  droplevels()
+
+summary(div.dat)
+head(div.dat)
+```
+
+##### Create two subsets based on the type of determiner
+
+```{r eval=T, echo=T, message=F}
+div.dat.def <- div.dat %>% filter(Determiner == "Definite")
+div.dat.pos <- div.dat %>% filter(Determiner == "Possessive")
+```
+
+##### Define bootstrap functions to compute a divergence point for the target vs. unrelated conditions
+
+Number of consecutive statistically significant time bins required to establish divergence, and number of bootstrap iterations
+
+```{r eval=T, echo=T, message=F}
+Nbins = 20
+Niter = 100L
+```
+
+Bootstrap function using lmer
+
+```{r eval=T, echo=T, message=F}
+boot_L1L2_lmer = function(original_data, resample_indices){
+  dat = original_data[resample_indices, ]
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+
+  # return a TRUE/FALSE vector of significant positive t-scores
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of sequential TRUEs; threshold is Nbins
+  for (i in 1:(length(t_g2)-Nbins)) {
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
+  # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
+  c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
+    which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
+    which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
+}
+
+```
+
+Run the lmer bootstrap on the two subsets by determiner type
+
+```{r eval=F, echo=T, message=F}
+bootres_L1L2_lmer_def = boot::boot(
+  data = div.dat.def,  # data set to bootstrap       
+  statistic = boot_L1L2_lmer,  # bootstrap function      
+  strata = div.dat.def$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_lmer_pos = boot::boot(
+  data = div.dat.pos,  # data set to bootstrap       
+  statistic = boot_L1L2_lmer,  # bootstrap function      
+  strata = div.dat.pos$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_lmer_def
+bootres_L1L2_lmer_pos
+```
+
+Save the lmer results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_lmer_def, file="DPA_results.lmer.def.rds")
+save(bootres_L1L2_lmer_pos, file="DPA_results.lmer.pos.rds")
+```
+
+##### Running the lmer bootstrap by trial
+
+This ended up yielding mostly NAs due to the small sample size.
+
+Define a function that runs the bootstrap function for all the trials
+
+```{r eval=F, echo=T, message=F}
+run_boot_per_trial <- function(toi_id, df, Niter = 100, strata_col = "StrataVars") {
+  trial_data <- df %>% filter(TOI == toi_id) %>% droplevels()
+
+  boot_result <- boot::boot(
+    data = trial_data,
+    statistic = boot_L1L2_glm,  # your divergence function
+    strata = trial_data[[strata_col]],
+    R = Niter
+  )
+
+  # Extract metadata from the first row (assuming Determiner etc. are constant per trial)
+  trial_info <- trial_data %>%
+    slice(1) %>%
+    select(TOI, Determiner, Phonol_Overlap, GenderMatch)  # add more if needed
+
+  list(boot = boot_result, info = trial_info)
+}
+```
+
+Run the function that runs the bootstrap function
+
+```{r eval=F, echo=T, message=F}
+trial_ids <- unique(div.dat$TOI)
+
+# Store both the bootstrap and metadata
+boot_trials <- lapply(trial_ids, function(toi) run_boot_per_trial(toi, div.dat, Niter = 100))
+names(boot_trials) <- trial_ids
+```
+
+Extract divergence values + metadata into a summary dataframe
+
+```{r eval=F, echo=T, message=F}
+# Function to extract means and metadata
+extract_div_summary <- function(result) {
+  bootres <- result$boot
+  info <- result$info
+
+  tibble::tibble(
+    TOI = info$TOI,
+    Determiner = info$Determiner,
+    Phonol_Overlap = info$Phonol_Overlap,
+    GenderMatch = info$GenderMatchTarget_D,
+    ASI_divergence = mean(bootres$t[,2], na.rm = TRUE) * 10 - 10,
+    HSS_divergence = mean(bootres$t[,3], na.rm = TRUE) * 10 - 10
+  )
+}
+
+# Build summary
+div_summary_df <- purrr::map_dfr(boot_trials, extract_div_summary)
+```
+
+Bootstrap function using glm (generalized linear model)
+
+```{r eval=F, echo=T, message=F}
+boot_L1L2_glm = function(original_data, resample_indices){
+  dat = original_data[resample_indices, ]
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(glm(FixP ~ AOI, family = binomial))$coefficients["AOITarget", "z value"])
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(glm(FixP ~ AOI, family = binomial))$coefficients["AOITarget", "z value"])
+
+  # return a TRUE/FALSE vector of significant positive t-scores
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of sequential TRUEs; threshold is Nbins
+  for (i in 1:(length(t_g2)-Nbins)) {
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
+  # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
+  c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
+    which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
+    which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
+}
+
+```
+
+Run the glm bootstrap on the two subsets by determiner type
+
+```{r eval=F, echo=T, message=F}
+bootres_L1L2_glm_def = boot::boot(
+  data = div.dat.def,  # data set to bootstrap       
+  statistic = boot_L1L2_glm,  # bootstrap function      
+  strata = div.dat.def$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_glm_pos = boot::boot(
+  data = div.dat.pos,  # data set to bootstrap       
+  statistic = boot_L1L2_glm,  # bootstrap function      
+  strata = div.dat.pos$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_glm_def
+bootres_L1L2_glm_pos
+```
+
+Save the glm results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_glm_def, file="DPA_results.glm.def.rds")
+save(bootres_L1L2_glm_pos, file="DPA_results.glm.pos.rds")
+```
+
+##### Extracting and plotting the divergence points
+
+Load the lmer results
+
+```{r eval=T, echo=T, message=F}
+load("DPA_results.lmer.def.rds")
+load("DPA_results.lmer.pos.rds")
+```
+
+Load the glm results
+
+```{r eval=F, echo=T, message=F}
+load("DPA_results.glm.def.rds")
+load("DPA_results.glm.pos.rds")
+```
+
+Define function to extract divergence points and confidence intervals from bootstrapping results
+
+```{r eval=T, echo=T, message=F}
+get_divergence_ms <- function(bootres, index) {
+  # index = 2 for ASI, 3 for HSS
+  mean_bin <- mean(bootres$t[, index], na.rm = TRUE)
+  ci_bin <- boot::boot.ci(bootres, index = index, type = "perc")$percent[4:5]
+  
+  mean_ms <- (mean_bin - 1) * 10
+  ci_ms <- (ci_bin - 1) * 10
+  
+  list(mean = mean_ms, ci = ci_ms)
+}
+```
+
+Run the function on all the results
+
+```{r eval=T, echo=T, message=F}
+# Definite determiner
+def_asi <- get_divergence_ms(bootres_L1L2_lmer_def, index = 2)
+def_hss <- get_divergence_ms(bootres_L1L2_lmer_def, index = 3)
+
+# Possessive determiner
+pos_asi <- get_divergence_ms(bootres_L1L2_lmer_pos, index = 2)
+pos_hss <- get_divergence_ms(bootres_L1L2_lmer_pos, index = 3)
+```
+
+Create dataframe for plotting
+
+```{r eval=T, echo=T, message=F}
+div_df <- tibble::tibble(
+  Determiner = c("Definite", "Definite", "Possessive", "Possessive"),
+  SpeakerType = c("1", "2", "1", "2"),
+  TimeMS = c(def_asi$mean, def_hss$mean, pos_asi$mean, pos_hss$mean),
+  CI_low = c(def_asi$ci[1], def_hss$ci[1], pos_asi$ci[1], pos_hss$ci[1]),
+  CI_high = c(def_asi$ci[2], def_hss$ci[2], pos_asi$ci[2], pos_hss$ci[2])
+)
+
+div_df = div_df %>% mutate_at(vars(SpeakerType, Determiner), as.factor)
+
+div_df <- div_df %>%
+  mutate(label = paste0(TimeMS, " ms"))
+```
+
+Add divergence points and their confidence intervals to the two-variable plots
+
+```{r eval=T, echo=T, message=F, fig.width = 14}
+fix.plot.twovar +
+  geom_point(data = div_df,
+             aes(x = TimeMS, y = 0.48),
+             shape = 18, size = 4, color = "black") +
+  geom_errorbarh(data = div_df,
+                 aes(xmin = CI_low, xmax = CI_high, y = 0.48),
+                 height = 0.02, color = "black", linewidth = 0.6) +
+  geom_text(data = div_df,
+          aes(x = TimeMS - 50, y = 0.55, label = label), 
+          size = 10, fontface="bold")
+```
+
+Save the plots
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot_twovar_divpts.png", width = 20, height = 15, dpi = 300)
+```
+
+### 4. Group comparison
+
+We can compute a p-value for the group comparison by creating a bootstrap distribution of the null hypothesis. To do this, we will first pool the original data from both groups, randomly assign group labels, and then estimate a difference in divergence point. We will repeat this many times to obtain a distribution of divergence point that could be expected under the null hypothesis. We will obtain the p-value by calculating the proportion of samples from this null distribution that are larger than the observed difference in divergence point in the empirical data.
+
+Below, we will calculate a p-value for the group comparison (ASI vs. HSS group). We will first define a bootstrap function.
+
+##### Define the bootstrap function for group comparison (only lmer so far)
+
+```{r eval=T, echo=T, message=F}
+boot_L1L2_pval = function(original_data, resample_indices){
+  dat_resample = original_data[resample_indices, ] # resample the data
+  
+  dat = dat_resample %>% 
+    group_by(Participant, AOI, TimeMS_adjusted) %>% 
+    transform(SpeakerType=sample(SpeakerType,replace=F)) %>% # randomly assign group labels 
+    ungroup() #%>% 
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+  
+  # return a TRUE/FALSE vector of significant positive t-scores  
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of 4 sequential TRUEs 
+  for (i in 1:(length(t_g2)-Nbins)) { 
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  delta_g1g2  # onset difference L1 vs. L2 t[,1]
+}
+
+```
+
+##### Run the lmer bootstrap on the two subsets by determiner type
+
+```{r eval=F, echo=T, message=F}
+bootres_L1L2_pval_def = boot::boot(
+  data = div.dat.def,  # data set to bootstrap       
+  statistic = boot_L1L2_pval,  # bootstrap function      
+  strata = div.dat.def$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations        
+
+bootres_L1L2_pval_pos = boot::boot(
+  data = div.dat.pos,  # data set to bootstrap       
+  statistic = boot_L1L2_pval,  # bootstrap function      
+  strata = div.dat.pos$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations   
+
+bootres_L1L2_pval_def
+bootres_L1L2_pval_pos
+```
+
+##### Save the group comparison results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_pval, file="DPA_results.pval.def.rds")
+save(bootres_L1L2_pval, file="DPA_results.pval.pos.rds")
+```
+
+##### If we already have saved results, we can load them.
+
+```{r eval=F, echo=T, message=F}
+load("DPA_results.pval.def.rds")
+load("DPA_results.pval.pos.rds")
+```
+
+##### Compute the p-values
+
+```{r eval=F, echo=T, message=F}
+pval.def <- round(mean(bootres_L1L2_pval_def$t[,1]>=bootres_L1L2_lmer_def$t0[1], na.rm=T), 5)        
+pval.pos <- round(mean(bootres_L1L2_pval_pos$t[,1]>=bootres_L1L2_lmer_pos$t0[1], na.rm=T), 5) 
+
+pval.def
+pval.pos
+```
