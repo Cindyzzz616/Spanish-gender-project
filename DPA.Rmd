@@ -113,7 +113,7 @@ installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
 ##### Read the time-course output data of the eyetracker from file
 
 ```{r eval=T, message=F}
-fix.dat = read_delim("/Users/cindyzhang/Desktop/Spanish Gender Project/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
+fix.dat = read_delim("/Users/cindyzhang/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
 # all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
 ```
 
