@@ -124,10 +124,76 @@ summary(fix.dat)
 head(fix.dat)
 ```
 
+
+
+
+
+
+
+
+##### Change `TOI` and `Participant` to factor and create a list of all trial IDs and participants
+
+```{r eval=T, echo=T, message=F}
+fix.dat = fix.dat %>% mutate_at(vars(TOI, Participant), as.factor)
+TOIs <- as.character(unique(fix.dat$TOI))
+participants <- as.character(unique(fix.dat$Participant))
+fix.dat %>%
+  distinct(Participant, TOI) %>%
+  nrow()
+```
+
+
+##### Re-bin the fixation data and store it in a new dataframe
+``` {r eval=F, echo=T, message=F}
+fix.rebinned <- data.frame()
+
+for (trial_id in TOIs[1:5]) {
+  # calculate duration of pseudo-bins for the given trial
+  noun_onset <- unique(fix.dat$NounOnset_adjusted[fix.dat$TOI == trial_id])
+  ending_offset <- unique(fix.dat$EndingOffset_adjusted[fix.dat$TOI == trial_id])
+  pbin_dur = ending_offset - noun_onset
+  
+  for (participant in participants[1:5]) {
+    # select all the bins in the window of interest of the given trial and participant
+    df_trial <- fix.dat[fix.dat$TOI == trial_id & 
+                        fix.dat$Participant == participant &
+                        fix.dat$NounOnset_adjusted + 200 <= fix.dat$TimeMS_adjusted &
+                        fix.dat$TimeMS_adjusted <= fix.dat$EndingOffset_adjusted + 200, ]
+    
+    unique_bins <- sort(unique(df_trial$Bin))
+    
+    # iterate through each bin
+    for (bin in unique_bins) {
+      df_bin <- df_trial[df_trial$Bin == bin, ]
+      
+      # Example: compute mean fixation in this bin
+      # mean_fix <- mean(df_bin$FixP_mean)
+      
+      # Add to result frame
+      fix.rebinned <- rbind(
+        fix.rebinned,
+        data.frame(
+          Trial = trial_id,
+          Participant = participant,
+          Bin = bin,
+          Pseudo_bin_duration = pbin_dur
+        )
+      )
+    }
+  }
+}
+```
+
+
+
+
+
+
 ##### Remove rows where the time bins are not 10ms
 
 ```{r eval=T, message=F}
 fix.dat <- fix.dat %>% filter(Bin_duration == 10)
+# TODO not sure if we should still do that
 ```
 
 ##### Add AreaFixated column
@@ -139,6 +205,7 @@ fix.dat <- fix.dat %>%
     Distractor == 1 ~ "Distractor",
     Target == 1 ~ "Target"
   ))
+# TODO no more AreaFixated because there can be multiple in one pseudo-bin. Need to find out if we can still pivot the data to a long format
 ```
 
 ##### Add GenderMatch column
