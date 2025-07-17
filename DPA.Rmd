@@ -151,7 +151,7 @@ for (trial_id in TOIs[1:5]) {
   # calculate duration of pseudo-bins for the given trial
   noun_onset <- unique(fix.dat$NounOnset_adjusted[fix.dat$TOI == trial_id])
   ending_offset <- unique(fix.dat$EndingOffset_adjusted[fix.dat$TOI == trial_id])
-  pbin_dur = ending_offset - noun_onset
+  pbin_dur = (ending_offset - noun_onset) / 100
   
   for (participant in participants[1:5]) {
     # select all the bins in the window of interest of the given trial and participant
@@ -160,25 +160,65 @@ for (trial_id in TOIs[1:5]) {
                         fix.dat$NounOnset_adjusted + 200 <= fix.dat$TimeMS_adjusted &
                         fix.dat$TimeMS_adjusted <= fix.dat$EndingOffset_adjusted + 200, ]
     
-    unique_bins <- sort(unique(df_trial$Bin))
+    # unique_bins <- sort(unique(df_trial$Bin))
     
-    # iterate through each bin
-    for (bin in unique_bins) {
-      df_bin <- df_trial[df_trial$Bin == bin, ]
+    # iterate through 100 intervals in the window of interest to create 100 pseudo-bins
+    i = 1
+    while (i <= 100) {
       
-      # Example: compute mean fixation in this bin
-      # mean_fix <- mean(df_bin$FixP_mean)
+      competitor_fix_count = 0
+      distractor_fix_count = 0
+      target_fix_count = 0
       
+      bins_in_interval <- df_trial %>%
+        filter(TimeMS_adjusted >= i * noun_onset, # TODO double check if this is supposed to be noun onset/ending offset or pbin_dur
+               TimeMS_adjusted <= (i+1) * ending_offset) %>%
+        pull(Bin) %>%
+        unique() %>%
+        sort()
+      
+      # iterate through each real bin in the interval
+      for (bin in bins_in_interval) {
+        
+        # select a real bin in an interval with the length as the pseudo-bin duration
+        df_bin <- df_trial[df_trial$Bin == bin, ]
+        
+        if (df_bin$Competitor == 1) {
+          competitor_fix_count = competitor_fix_count + 1
+        }
+        if (df_bin$Distractor == 1) {
+          distractor_fix_count = distractor_fix_count + 1
+        }
+        if (df_bin$Target == 1) {
+          target_fix_count = target_fix_count + 1
+        }
+        
+        # Example: compute mean fixation in this bin
+        # mean_fix <- mean(df_bin$FixP_mean)
+      }
+      
+      competitor_fixP = competitor_fix_count / pbin_dur # TODO double check this formula
+      distractor_fixP = distractor_fix_count / pbin_dur
+      target_fixP = target_fix_count / pbin_dur
+    
       # Add to result frame
       fix.rebinned <- rbind(
         fix.rebinned,
         data.frame(
           Trial = trial_id,
           Participant = participant,
-          Bin = bin,
-          Pseudo_bin_duration = pbin_dur
+          Pseudo_bin = i,
+          Competitor_FixP = competitor_fixP,
+          Distractor_FixP = distractor_fixP,
+          Target_FixP = target_fixP,
+          competitor_fix_count = competitor_fix_count,
+          distractor_fix_count = distractor_fix_count,
+          target_fix_count = target_fix_count,
+          Pseudo_bin_duration = pbin_dur,
+          Number_of_bins_in_interval = length(bins_in_interval)
         )
       )
+      i = i + 1
     }
   }
 }
