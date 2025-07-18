@@ -4,6 +4,8 @@ output:
   html_document: default
   pdf_document: default
 date: "2025-05-27"
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -124,18 +126,56 @@ summary(fix.dat)
 head(fix.dat)
 ```
 
+##### Fill in the missing time points and add a trackloss column
 
+``` {r eval=T, echo=T, message=F}
+# Step 1: Mark existing rows as Trackloss = 0
+# fix.dat$Trackloss <- 0
+# or not bc we already have a Trackloss column that is all FALSE
 
+# Step 1: Create complete time series
+all_times <- seq(
+  min(fix.dat$TimeMS_adjusted),
+  max(fix.dat$TimeMS_adjusted),
+  by = 10
+)
+```
 
+``` {r}
+# Step 2: Make sure fix.dat$TimeMS_adjusted is numeric
+#fix.dat$TimeMS_adjusted <- as.numeric(fix.dat$TimeMS_adjusted)
 
+# Step 3: Merge original data with complete tifme series
+fix.dat <- fix.dat %>%
+  group_by(Participant, TOI) %>%
+  complete(TimeMS_adjusted = all_times) %>% # TODO do we want a full sequence of the time specific to the participant-trial group, or do we want to use the global min and max time?
+  # use full_seq(TimeMS_adjusted, 10) for local time range
+  mutate(Trackloss = ifelse(is.na(Trackloss), 1, 0)) %>%
+  mutate(Bin = row_number()) %>%
+  mutate(
+    Competitor = ifelse(Trackloss == 1, 0, Competitor),
+    Distractor = ifelse(Trackloss == 1, 0, Distractor),
+    Target = ifelse(Trackloss == 1, 0, Target)
+    ) %>%
+  ungroup()
 
+# # Step 4: Fill in the missing bin numbers
+# bin_width <- 10  # or whatever your real bin size is
+# 
+# fix.full <- fix.full %>%
+#   group_by(Participant, TOI) %>%
+#   mutate(
+#     Bin = floor(TimeMS_adjusted/10+268))
+#   ) %>%
+#   ungroup()
+```
 
 
 ##### Change `TOI` and `Participant` to factor and create a list of all trial IDs and participants
 
 ```{r eval=T, echo=T, message=F}
 fix.dat = fix.dat %>% mutate_at(vars(TOI, Participant), as.factor)
-TOIs <- as.character(unique(fix.dat$TOI))
+TOIs <- sort(as.character(unique(fix.dat$TOI)))
 participants <- as.character(unique(fix.dat$Participant))
 fix.dat %>%
   distinct(Participant, TOI) %>%
@@ -143,44 +183,131 @@ fix.dat %>%
 ```
 
 
+
+
+##### Sanity check plot
+``` {r}
+df_plot <- fix.dat %>%
+  filter(Participant == "TA105", TOI == "Trial02-def-perro_0") %>%
+  select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
+  pivot_longer(cols = c(Target, Competitor, Distractor),
+               names_to = "AOI", values_to = "Fixation")
+
+library(ggplot2)
+
+ggplot(df_plot, aes(x = TimeMS_adjusted, y = Fixation, color = AOI)) +
+  geom_line(size = 0.8) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  labs(title = "Binary Fixations by AOI",
+       subtitle = "Participant TA105 – Trial02-def-perro_0",
+       x = "Time (ms)",
+       y = "Fixated (0/1)") +
+  geom_vline(xintercept = 108, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = 551, linetype = "dotted", color = "black") +
+  theme_minimal()
+
+```
+
+
+
+
+##### More sanity plotting
+``` {r}
+library(dplyr)
+library(ggplot2)
+
+# Set a trial and participant to inspect
+trial_id <- "Trial02-def-perro_0"
+participant_id <- "TA105"
+
+plot_df <- fix.dat %>%
+  filter(TOI == trial_id, Participant == participant_id) %>%
+  select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
+  pivot_longer(cols = c(Target, Competitor, Distractor),
+               names_to = "AOI", values_to = "FixP")
+
+ggplot(plot_df, aes(x = TimeMS_adjusted, y = FixP, color = AOI)) +
+  geom_step(size = 1) +
+  labs(title = paste("Step Function of Fixation Proportion"),
+       subtitle = paste(participant_id, "–", trial_id),
+       x = "Time (ms)", y = "Fixation Proportion") +
+  scale_x_continuous(limits = c(305, 345)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_minimal()
+```
+
+
+
+
+
+
+##### Average noun onset and ending offset because our window feels quite small
+``` {r}
+fix.dat %>%
+  summarise(avg_onset = mean(unique(NounOnset_adjusted), na.rm = TRUE))
+fix.dat %>%
+  summarise(avg_offset = mean(unique(EndingOffset_adjusted), na.rm = TRUE))
+```
+
+
+
+
+
 ##### Re-bin the fixation data and store it in a new dataframe
 ``` {r eval=F, echo=T, message=F}
 fix.rebinned <- data.frame()
 
-for (trial_id in TOIs[1:5]) {
-  # calculate duration of pseudo-bins for the given trial
-  noun_onset <- unique(fix.dat$NounOnset_adjusted[fix.dat$TOI == trial_id])
-  ending_offset <- unique(fix.dat$EndingOffset_adjusted[fix.dat$TOI == trial_id])
-  pbin_dur = (ending_offset - noun_onset) / 100
+for (trial_id in TOIs[3:3]) {
   
-  for (participant in participants[1:5]) {
-    # select all the bins in the window of interest of the given trial and participant
+  # Get scalar onset/offset for this trial
+  noun_onset <- fix.dat %>%
+    filter(TOI == trial_id, !is.na(NounOnset_adjusted)) %>%
+    pull(NounOnset_adjusted) %>%
+    unique()
+
+  ending_offset <- fix.dat %>%
+    filter(TOI == trial_id, !is.na(EndingOffset_adjusted)) %>%
+    pull(EndingOffset_adjusted) %>%
+    unique()
+  
+  # duration of each pseudo-bin
+  pbin_dur <- (ending_offset - noun_onset) / 100  
+  
+  for (participant in participants[1:1]) {
+    
+    # Subset relevant rows for this trial × participant
     df_trial <- fix.dat[fix.dat$TOI == trial_id & 
-                        fix.dat$Participant == participant &
-                        fix.dat$NounOnset_adjusted + 200 <= fix.dat$TimeMS_adjusted &
-                        fix.dat$TimeMS_adjusted <= fix.dat$EndingOffset_adjusted + 200, ]
+                          fix.dat$Participant == participant &
+                          fix.dat$TimeMS_adjusted >= noun_onset + 200 &
+                          fix.dat$TimeMS_adjusted <= ending_offset + 200, ]
     
-    # unique_bins <- sort(unique(df_trial$Bin))
-    
-    # iterate through 100 intervals in the window of interest to create 100 pseudo-bins
-    i = 1
-    while (i <= 100) {
+    for (i in 1:100) {
+      start_time <- noun_onset + (i - 1) * pbin_dur
+      end_time <- noun_onset + i * pbin_dur
       
-      competitor_fix_count = 0
-      distractor_fix_count = 0
-      target_fix_count = 0
+      print(trial_id)
+      print(participant)
+      print(pbin_dur)
+      print(paste("i:", i))
+      print(paste("noun_onset:", noun_onset))
+      print(paste("ending_offset:", ending_offset))
+      print(paste("pbin_dur:", pbin_dur))
+      print(paste("start_time:", noun_onset + 200 + (i - 1) * pbin_dur))
+      print(paste("end_time:", noun_onset + 200 + i * pbin_dur))
+      print(str(df_trial$TimeMS_adjusted))
       
       bins_in_interval <- df_trial %>%
-        filter(TimeMS_adjusted >= i * noun_onset, # TODO double check if this is supposed to be noun onset/ending offset or pbin_dur
-               TimeMS_adjusted <= (i+1) * ending_offset) %>%
+        filter(TimeMS_adjusted >= start_time,
+               TimeMS_adjusted < end_time) %>%
         pull(Bin) %>%
-        unique() %>%
         sort()
+      print(paste("bins in interval:", bins_in_interval))
       
-      # iterate through each real bin in the interval
+      competitor_fix_count <- 0
+      distractor_fix_count <- 0
+      target_fix_count <- 0
+      
       for (bin in bins_in_interval) {
-        
-        # select a real bin in an interval with the length as the pseudo-bin duration
         df_bin <- df_trial[df_trial$Bin == bin, ]
         
         if (df_bin$Competitor == 1) {
@@ -192,16 +319,12 @@ for (trial_id in TOIs[1:5]) {
         if (df_bin$Target == 1) {
           target_fix_count = target_fix_count + 1
         }
-        
-        # Example: compute mean fixation in this bin
-        # mean_fix <- mean(df_bin$FixP_mean)
       }
       
-      competitor_fixP = competitor_fix_count / pbin_dur # TODO double check this formula
-      distractor_fixP = distractor_fix_count / pbin_dur
-      target_fixP = target_fix_count / pbin_dur
-    
-      # Add to result frame
+      competitor_fixP <- competitor_fix_count / pbin_dur
+      distractor_fixP <- distractor_fix_count / pbin_dur
+      target_fixP     <- target_fix_count / pbin_dur
+      
       fix.rebinned <- rbind(
         fix.rebinned,
         data.frame(
@@ -218,7 +341,6 @@ for (trial_id in TOIs[1:5]) {
           Number_of_bins_in_interval = length(bins_in_interval)
         )
       )
-      i = i + 1
     }
   }
 }
@@ -227,6 +349,15 @@ for (trial_id in TOIs[1:5]) {
 
 
 
+
+
+
+
+
+
+
+
+##### Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums
 
 
 ##### Remove rows where the time bins are not 10ms
