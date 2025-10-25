@@ -665,6 +665,16 @@ fix.twovar <- fix.twovar %>%
 fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 ```
 
+##### NEW create a step function for the average FixP of all participants for each trial
+
+```{r eval=T, message=F}
+fix.twovar.mean <- fix.twovar %>%
+  group_by(Participant, AOI, SpeakerType, Determiner, TimeMS_adjusted) %>%
+  summarise(FixP = mean(FixP, na.rm = TRUE), .groups = "drop")
+
+summary(fix.twovar.mean)
+```
+
 ##### Merge the non minimal pair values
 
 ```{r eval=T, echo=T, message=F}
