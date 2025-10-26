@@ -104,11 +104,12 @@ require(ggplot2)
 require(boot)
 require(dplyr)
 require(lme4)
+require(purrr)
 ```
 
 ##### Package versions
 
-```{r echo=F}
+```{r eval=T, echo=F}
 installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
 ```
 
@@ -141,11 +142,11 @@ all_times <- seq(
 )
 ```
 
-``` {r}
+``` {r eval=T, message=F}
 # Step 2: Make sure fix.dat$TimeMS_adjusted is numeric
 #fix.dat$TimeMS_adjusted <- as.numeric(fix.dat$TimeMS_adjusted)
 
-# Step 3: Merge original data with complete tifme series
+# Step 3: Merge original data with complete time series
 fix.dat <- fix.dat %>%
   group_by(Participant, TOI) %>%
   complete(TimeMS_adjusted = all_times) %>% # TODO do we want a full sequence of the time specific to the participant-trial group, or do we want to use the global min and max time?
@@ -159,15 +160,13 @@ fix.dat <- fix.dat %>%
     ) %>%
   ungroup()
 
-# # Step 4: Fill in the missing bin numbers
-# bin_width <- 10  # or whatever your real bin size is
-# 
-# fix.full <- fix.full %>%
-#   group_by(Participant, TOI) %>%
-#   mutate(
-#     Bin = floor(TimeMS_adjusted/10+268))
-#   ) %>%
-#   ungroup()
+# Step 4: Fill in the missing bin numbers
+bin_width <- 10  # or whatever your real bin size is
+
+fix.dat <- fix.dat %>%
+  group_by(Participant, TOI) %>%
+  mutate(Bin = floor(TimeMS_adjusted/10+268)) %>%
+  ungroup()
 ```
 
 
@@ -665,14 +664,191 @@ fix.twovar <- fix.twovar %>%
 fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 ```
 
-##### NEW create a step function for the average FixP of all participants for each trial
+##### UPDATE create a step function for the average FixP of all participants for each trial
 
 ```{r eval=T, message=F}
-fix.twovar.mean <- fix.twovar %>%
-  group_by(Participant, AOI, SpeakerType, Determiner, TimeMS_adjusted) %>%
-  summarise(FixP = mean(FixP, na.rm = TRUE), .groups = "drop")
+# Define the number of pseudo-bins
+Npbins = 100
+win_start = 0
+win_end = 1400
 
-summary(fix.twovar.mean)
+fix.twovar <- fix.twovar %>%
+  filter(TimeMS_adjusted >= win_start, TimeMS_adjusted <= win_end)
+
+# Group the fixation data by participant and trial)
+# Should probably start with fix.twovar instead?
+# fix.twovar.mean <- fix.twovar %>%
+#   group_by(Participant, AOI, SpeakerType, Determiner, TOI, TimeMS_adjusted) %>%
+#   summarise(FixP = mean(FixP, na.rm = TRUE), .groups = "drop")
+# 
+# summary(fix.twovar.mean)
+
+
+
+# Assuming fix.twovar has: Participant, TOI, TimeMS_adjusted, FixP, AOI
+
+# Define windows for each trial
+# Compute trial-specific windows using EndingOffset_adjusted
+trial_windows <- fix.twovar %>%
+  group_by(TOI) %>%
+  summarise(
+    trial_duration = max(EndingOffset_adjusted, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    window_list = map(trial_duration, function(dur) {
+      edges <- seq(0, dur, length.out = Npbins + 1)
+      tibble(start = head(edges, -1), end = tail(edges, -1))
+    })
+  ) %>%
+  unnest(window_list)
+```
+
+```{r eval=T, message=F}
+calc_auc_fancy <- function(time, fixp) {
+  valid <- !is.na(time) & !is.na(fixp)
+  time <- time[valid]
+  fixp <- fixp[valid]
+  if (length(time) < 2) return(NA_real_)
+  f <- approxfun(x = time, y = fixp, method = "constant", rule = 2)
+  integrate(f, lower = min(time), upper = max(time))$value
+}
+
+calc_auc_interval <- function(df, start, end) {
+  df_sub <- df %>%
+    filter(TimeMS_adjusted >= start, TimeMS_adjusted < end)
+  if (nrow(df_sub) < 2) return(NA_real_)
+  calc_auc_fancy(df_sub$TimeMS_adjusted, df_sub$FixP)
+}
+```
+
+``` {r eval=T, message=F}
+# Compute trial-specific AUCs for each participant × AOI
+auc_trial_windows <- pmap_dfr(
+  trial_windows,
+  function(TOI, trial_duration, start, end) {
+    if (!TOI %in% fix.twovar$TOI) return(tibble())
+    df_trial <- fix.twovar %>% filter(TOI == "Trial14-pos-maestro_0")
+    if (nrow(df_trial) == 0) return(tibble())
+
+    df_trial %>%
+      group_by(Participant, AOI) %>%
+      summarise(AUC = calc_auc_interval(cur_data(), start, end), .groups = "drop") %>%
+      mutate(TOI = TOI, WindowStart = start, WindowEnd = end,
+             WindowDur = end - start, AUC_prop = AUC / (end - start))
+  }
+)
+
+head(auc_trial_windows)
+```
+
+``` {r eval=T, message=F}
+# auc_by_participant_trial <- fix.twovar %>%
+#   group_by(Participant, TOI, AOI, SpeakerType, Determiner) %>% # here, we group by the variables that we will compare between later
+#   summarise(AUC = sum(FixP) * 10)
+# 
+# head(auc_by_participant_trial)
+# 
+# 
+# intervals <- data.frame(
+#   start = c(0, 400, 800),
+#   end   = c(400, 800, 1200),
+#   label = c("0–400", "400–800", "800–1200")
+# )
+
+# fix.intervalled <- fix.twovar %>%
+#   mutate(
+#     TimeWindow = case_when(
+#       TimeMS_adjusted >= 0   & TimeMS_adjusted < 400  ~ "0–400",
+#       TimeMS_adjusted >= 400 & TimeMS_adjusted < 800  ~ "400–800",
+#       TimeMS_adjusted >= 800 & TimeMS_adjusted <= 1200 ~ "800–1200",
+#       TRUE ~ NA_character_
+#     )
+#   ) %>%
+#   filter(!is.na(TimeWindow))
+
+# auc_by_window <- fix.intervalled %>%
+#   group_by(Participant, AOI, TOI, TimeWindow) %>%
+#   summarise(
+#     AUC = calc_auc_fancy(TimeMS_adjusted, FixP),
+#     .groups = "drop"
+#   )
+
+
+
+# Compute trial-specific AUC windows
+# auc_trial_windows <- trial_windows %>%
+#   select(TOI, window_list) %>%
+#   unnest(window_list) %>%
+#   group_by(TOI, start, end) %>%
+#   group_modify(~{
+#     df_trial <- fix.twovar %>% filter(TOI == .y$TOI)
+#     
+#     df_trial %>%
+#       group_by(Participant, AOI) %>%
+#       summarise(
+#         AUC = calc_auc_interval(cur_data(), .x$start, .x$end),
+#         .groups = "drop"
+#       ) %>%
+#       mutate(WindowStart = .x$start, WindowEnd = .x$end)
+#   }) %>%
+#   ungroup()
+```
+
+``` {r eval=T, message=F}
+# Define a function to make a step function for each participant and trial
+# make_stepfun <- function(time, fixp) {
+#   approxfun(x = time, y = fixp, method = "constant", rule = 2)
+# }
+# 
+# # Define a function to calculate the area under the step function for any time interval 
+# calc_auc <- function(time, fixp, start, end) {
+#   f <- make_stepfun(time, fixp)
+#   integrate(f, lower = start, upper = end)$value
+# }
+
+
+unique(fix.twovar$Participant)[1:10]
+unique(fix.twovar$TOI)[1:10]
+levels(fix.twovar$AOI)
+
+# Example subset
+subj_data <- fix.twovar %>%
+  filter(Participant == "TA108", AOI == "Target",
+         TOI == "Trial09-pos-cocinera_0") %>%
+  arrange(TimeMS_adjusted)
+
+head(subj_data)
+
+# calc_auc_fancy(subj_data$TimeMS_adjusted, subj_data$FixP)
+# calc_auc_interval(subj_data, 200, 800)
+
+# -> columns: TimeMS_adjusted, FixP (0/1)
+# 
+f_step <- approxfun(subj_data$TimeMS_adjusted, subj_data$FixP,
+                    method = "constant", rule = 2)
+
+# Generate continuous time points for plotting
+t_seq <- seq(min(subj_data$TimeMS_adjusted),
+             max(subj_data$TimeMS_adjusted),
+             by = 10)
+
+plot(t_seq, f_step(t_seq),
+     type = "s", lwd = 2, col = "#ffac00",
+     xlab = "Time (ms)",
+     ylab = "Fixation Probability",
+     main = paste("Step Function", unique(subj_data$Participant)))
+
+
+
+
+# # Apply the two functions across participants and trials
+# auc_summary <- fix.twovar.mean %>%
+#   group_by(Participant, AOI, SpeakerType, Determiner) %>%
+#   summarise(AUC = calc_auc(TimeMS_adjusted, FixP),
+#             .groups = "drop")
+
+# summary(auc_summary)
 ```
 
 ##### Merge the non minimal pair values
