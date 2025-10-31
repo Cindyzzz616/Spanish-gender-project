@@ -146,48 +146,132 @@ all_times <- seq(
 # Step 2: Make sure fix.dat$TimeMS_adjusted is numeric
 #fix.dat$TimeMS_adjusted <- as.numeric(fix.dat$TimeMS_adjusted)
 
-# Step 3: Merge original data with complete time series
-fix.dat <- fix.dat %>%
-  group_by(Participant, TOI) %>%
-  complete(TimeMS_adjusted = all_times) %>% # TODO do we want a full sequence of the time specific to the participant-trial group, or do we want to use the global min and max time?
-  # use full_seq(TimeMS_adjusted, 10) for local time range
-  mutate(Trackloss = ifelse(is.na(Trackloss), 1, 0)) %>%
-  mutate(Bin = row_number()) %>%
-  mutate(
-    Competitor = ifelse(Trackloss == 1, 0, Competitor),
-    Distractor = ifelse(Trackloss == 1, 0, Distractor),
-    Target = ifelse(Trackloss == 1, 0, Target)
-    ) %>%
-  ungroup()
+# Create every Participant x Trial combination
+participants <- unique(fix.dat$Participant)
+trials <- unique(fix.dat$TOI)
 
-# Step 4: Fill in the missing bin numbers
-bin_width <- 10  # or whatever your real bin size is
+# Build a table with all 32 × 96 combinations
+all_combos <- expand_grid(Participant = participants, TOI = trials)
 
-fix.dat <- fix.dat %>%
-  group_by(Participant, TOI) %>%
-  mutate(Bin = floor(TimeMS_adjusted/10+268)) %>%
-  ungroup()
+# Expand to include every timepoint for every combination
+full_template <- all_combos %>%
+  tidyr::expand(Participant, TOI, TimeMS_adjusted = all_times)
 ```
 
+```{r eval=T, message=F}
+# Build a unique trial info table
+# NOTE could add other trial variables as needed
+trial_info <- fix.dat %>%
+  filter(!is.na(Determiner)) %>%
+  group_by(TOI) %>%
+  summarise(
+    Determiner = first(Determiner),
+    SpeakerType = first(SpeakerType),
+    NounOnset_adjusted = first(NounOnset_adjusted),
+    EndingOffset_adjusted = first(EndingOffset_adjusted),
+    .groups = "drop"
+  )
+
+# Step 2: Join with raw data
+fix.dat.full <- full_template %>%
+  left_join(fix.dat, by = c("Participant", "TOI", "TimeMS_adjusted"))
+```
+
+```{r eval=T, message=F}
+# Merge it in and fill NAs
+fix.dat.full <- fix.dat.full %>%
+  left_join(trial_info, by = "TOI", suffix = c("", ".trial")) %>%
+  mutate(
+    # fill AOI and Trackloss columns
+    Trackloss  = ifelse(is.na(Trackloss), 1, Trackloss),
+    Target     = ifelse(is.na(Target), 0, Target),
+    Competitor = ifelse(is.na(Competitor), 0, Competitor),
+    Distractor = ifelse(is.na(Distractor), 0, Distractor),
+    
+    # fill Determiner and other trial-level values
+    Determiner = coalesce(Determiner, Determiner.trial),
+    SpeakerType = coalesce(SpeakerType, SpeakerType.trial),
+    NounOnset_adjusted = coalesce(NounOnset_adjusted, NounOnset_adjusted.trial),
+    EndingOffset_adjusted = coalesce(EndingOffset_adjusted, EndingOffset_adjusted.trial)
+  ) %>%
+  select(-any_of(c("Determiner.trial", "SpeakerType.trial",
+                   "NounOnset_adjusted.trial", "EndingOffset_adjusted.trial")))
+
+### Sanity checks
+
+# Check that everyone now has 743 bins
+fix.dat.full %>%
+  group_by(Participant, TOI) %>%
+  summarise(n_bins = n()) %>%
+  summarise(
+    n_missing = sum(n_bins != 743),
+    mean_bins = mean(n_bins)
+  )
+# n_missing = 0
+# mean_bins = 743
+
+# Check the time range
+range(fix.dat.full$TimeMS_adjusted)
+# [1] -2670  4750
+
+# Check a formerly missing case
+fix.dat.full %>%
+  filter(Participant == "TA106", TOI == "Trial01-def-campesina_0") %>%
+  summarise(min_time = min(TimeMS_adjusted), max_time = max(TimeMS_adjusted))
+
+# Save this complete dataset
+write_csv(fix.dat.full, "data/fix_dat_filled.csv")
+# NOTE: there seems to be some extra rows at the end of each trial? Should be fine since we're dropping the rows outside our pre-defined time-window anyway
+
+# Old implementation...
+# Step 3: Merge original data with complete time series
+# fix.dat <- fix.dat %>%
+#   group_by(Participant, TOI) %>%
+#   complete(TimeMS_adjusted = all_times) %>% # TODO do we want a full sequence of the time specific to the participant-trial group, or do we want to use the global min and max time?
+#   # use full_seq(TimeMS_adjusted, 10) for local time range
+#   mutate(Trackloss = ifelse(is.na(Trackloss), 1, 0)) %>%
+#   mutate(Bin = row_number()) %>%
+#   mutate(
+#     Competitor = ifelse(Trackloss == 1, 0, Competitor),
+#     Distractor = ifelse(Trackloss == 1, 0, Distractor),
+#     Target = ifelse(Trackloss == 1, 0, Target)
+#     ) %>%
+#   ungroup()
+# 
+# # Step 4: Fill in the missing bin numbers
+# bin_width <- 10  # or whatever your real bin size is
+# 
+# fix.dat <- fix.dat %>%
+#   group_by(Participant, TOI) %>%
+#   mutate(Bin = floor(TimeMS_adjusted/10+268)) %>%
+#   ungroup()
+```
+
+##### Trim data to analysis window
+```{r eval=T}
+# Broad analysis window
+WINDOW_START <- -300
+WINDOW_END <- 1400
+
+fix.dat.full <- fix.dat.full %>%
+  filter(TimeMS_adjusted >= WINDOW_START, TimeMS_adjusted <= WINDOW_END)
+```
 
 ##### Change `TOI` and `Participant` to factor and create a list of all trial IDs and participants
 
 ```{r eval=T, echo=T, message=F}
-fix.dat = fix.dat %>% mutate_at(vars(TOI, Participant), as.factor)
+fix.dat.full = fix.dat.full %>% mutate_at(vars(TOI, Participant), as.factor)
 TOIs <- sort(as.character(unique(fix.dat$TOI)))
 participants <- as.character(unique(fix.dat$Participant))
-fix.dat %>%
+fix.dat.full %>%
   distinct(Participant, TOI) %>%
   nrow()
 ```
 
-
-
-
 ##### Sanity check plot
-``` {r}
-df_plot <- fix.dat %>%
-  filter(Participant == "TA105", TOI == "Trial02-def-perro_0") %>%
+``` {r eval=T}
+df_plot <- fix.dat.full %>%
+  filter(Participant == "TA105", TOI == "Trial01-def-campesina_0") %>%
   select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
   pivot_longer(cols = c(Target, Competitor, Distractor),
                names_to = "AOI", values_to = "Fixation")
@@ -195,8 +279,7 @@ df_plot <- fix.dat %>%
 library(ggplot2)
 
 ggplot(df_plot, aes(x = TimeMS_adjusted, y = Fixation, color = AOI)) +
-  geom_line(size = 0.8) +
-  scale_y_continuous(breaks = c(0, 1)) +
+  geom_step(size = 0.8) +
   labs(title = "Binary Fixations by AOI",
        subtitle = "Participant TA105 – Trial02-def-perro_0",
        x = "Time (ms)",
@@ -207,19 +290,13 @@ ggplot(df_plot, aes(x = TimeMS_adjusted, y = Fixation, color = AOI)) +
 
 ```
 
-
-
-
 ##### More sanity plotting
-``` {r}
-library(dplyr)
-library(ggplot2)
-
+``` {r eval=T}
 # Set a trial and participant to inspect
-trial_id <- "Trial02-def-perro_0"
+trial_id <- "Trial01-def-campesina_0"
 participant_id <- "TA105"
 
-plot_df <- fix.dat %>%
+plot_df <- fix.dat.full %>%
   filter(TOI == trial_id, Participant == participant_id) %>%
   select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
   pivot_longer(cols = c(Target, Competitor, Distractor),
@@ -230,28 +307,24 @@ ggplot(plot_df, aes(x = TimeMS_adjusted, y = FixP, color = AOI)) +
   labs(title = paste("Step Function of Fixation Proportion"),
        subtitle = paste(participant_id, "–", trial_id),
        x = "Time (ms)", y = "Fixation Proportion") +
-  scale_x_continuous(limits = c(305, 345)) +
+  scale_x_continuous(limits = c(-300, 1400)) +
   scale_y_continuous(limits = c(0, 1)) +
   theme_minimal()
 ```
 
-
-
-
-
-
 ##### Average noun onset and ending offset because our window feels quite small
-``` {r}
-fix.dat %>%
+``` {r eval=F}
+fix.dat.full %>%
   summarise(avg_onset = mean(unique(NounOnset_adjusted), na.rm = TRUE))
-fix.dat %>%
+fix.dat.full %>%
   summarise(avg_offset = mean(unique(EndingOffset_adjusted), na.rm = TRUE))
 ```
 
 
+# TODO don't forget to change fix.dat to fix.dat.full from this point onwards
 
 
-
+# NOTE this is probably a past attempt at normalization
 ##### Re-bin the fixation data and store it in a new dataframe
 ``` {r eval=F, echo=T, message=F}
 fix.rebinned <- data.frame()
@@ -356,12 +429,12 @@ for (trial_id in TOIs[3:3]) {
 
 
 
-##### Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums
+# NOTE Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums
 
 
 ##### Remove rows where the time bins are not 10ms
 
-```{r eval=T, message=F}
+```{r eval=F, message=F}
 fix.dat <- fix.dat %>% filter(Bin_duration == 10)
 # TODO not sure if we should still do that
 ```
@@ -369,31 +442,25 @@ fix.dat <- fix.dat %>% filter(Bin_duration == 10)
 ##### Add AreaFixated column
 
 ```{r eval=T, message=F}
-fix.dat <- fix.dat %>%
+fix.dat.full <- fix.dat.full %>%
   mutate(AreaFixated = case_when(
     Competitor == 1 ~ "Competitor",
     Distractor == 1 ~ "Distractor",
-    Target == 1 ~ "Target"
+    Target == 1 ~ "Target",
+    TRUE ~ "None"
   ))
 # TODO no more AreaFixated because there can be multiple in one pseudo-bin. Need to find out if we can still pivot the data to a long format
-```
-
-##### Add GenderMatch column
-
-```{r eval=T, echo=T, message=F}
-fix.dat <- fix.dat %>%
-  mutate(GenderMatch = case_when(
-    N_Gender_D == N_Gender_T ~ "D=T",
-    N_Gender_D == N_Gender_C ~ "D=C"
-  ))
+# This is done later anyway, with fix.long
 ```
 
 ##### Reshape binomially encoded fixation data to a long format for plotting and analysis
 
 In the original experiment, the eyetracker takes 25 samples in each 50ms bin, and records the proportion of samples that fall in each AOI. Our eyetracker takes 1 sample in each 10ms bin, and records *which* AOI the sample falls in (we already removed the trackloss bins, so the sample must be in one of the 3 AOIs, and binomially encoded as 0 or 1).
+*Update* actually, now that we added the missing rows back in, there could be rows where FixP=0 in all 3 columns
+And the pivoted data should be fine after normalization - we'll just have rows with more than 1 non-zero AOI columns
 
 ```{r eval=T, echo=T, message=F}
-fix.long <- fix.dat %>%
+fix.long <- fix.dat.full %>%
   pivot_longer(
     cols = c(Target, Competitor, Distractor),
     names_to = "AOI",
@@ -401,28 +468,48 @@ fix.long <- fix.dat %>%
   )
 ```
 
+##### Add GenderMatch column
+
+```{r eval=F, echo=T, message=F}
+# NOTE we didn't coalesce N_Gender_D, etc yet when we were filling in the missing rows
+fix.long <- fix.long %>%
+  mutate(GenderMatch = case_when(
+    N_Gender_D == N_Gender_T ~ "D=T",
+    N_Gender_D == N_Gender_C ~ "D=C"
+  ))
+```
+
 ##### Change `Participant`, `TOI`, `AreaFixated`, `SpeakerType`, `AOI`, `Phonol_Overlap_T` and `GenderMatch` to factor
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.long = fix.long %>% mutate_at(vars(Participant, TOI, AreaFixated, SpeakerType, AOI, Phonol_Overlap_T, GenderMatch), as.factor)
 ```
 
 ##### Merge the non minimal pair values
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.long$Phonol_Overlap <- fix.long$Phonol_Overlap_T %>% fct_collapse(NonMinPair = c("First Syll-unstressed", "First Syll-stressed"))
+```
+
+
+
+
+##### Change `Participant`, `TOI`, `AreaFixated`, `SpeakerType`, `AOI`, `Phonol_Overlap_T` and `GenderMatch` to factor
+
+```{r eval=F, echo=T, message=F}
+fix.long = fix.long %>% mutate_at(vars(Participant, TOI, SpeakerType, AOI, Determiner, Trackloss), as.factor)
 ```
 
 ##### Inspect the data after factoring
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 head(fix.long)
 summary(fix.long)
 ```
 
 ##### Compute the mean, SD, SE and CI for `FixP` for each time bin, AOI, SpeakerType, Determiner and TOI
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.means = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner'), na.rm=T)
 
 head(fix.means)
@@ -431,7 +518,7 @@ summary(fix.means)
 
 ##### Compute Mean, etc. that takes Phonol_Overlap into account
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.means.phonol = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner', 'Phonol_Overlap'), na.rm=T)
 
 head(fix.means.phonol)
@@ -440,7 +527,7 @@ summary(fix.means.phonol)
 
 ##### Compute Mean, etc. that takes Phonol_Overlap AND GenderMatch into account
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.means.fourgroups = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner', 'Phonol_Overlap', 'GenderMatch'), na.rm=T)
 
 head(fix.means.fourgroups)
@@ -449,7 +536,7 @@ summary(fix.means.fourgroups)
 
 ##### Compute Mean, etc. that takes GenderMatch into account
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.means.gendermatch = Rmisc::summarySE(fix.long, measurevar='FixP', groupvars=c('TimeMS_adjusted','SpeakerType', 'AOI', 'Determiner', 'GenderMatch'), na.rm=T)
 
 head(fix.means.gendermatch)
@@ -460,7 +547,7 @@ summary(fix.means.gendermatch)
 
 ##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS) and Determiner type (Definite and Possessive)
 
-```{r eval=T, echo=T, message=F, fig.width=12}
+```{r eval=F, echo=T, message=F, fig.width=12}
 fix.plot = ggplot() + 
   facet_wrap(~Determiner + SpeakerType, ncol=2,
              labeller = labeller(
@@ -495,13 +582,13 @@ fix.plot
 
 ##### Save the plot
 
-```{r eval=T, message=F}
+```{r eval=F, message=F}
 ggsave("plots/fixation_plot.png", width = 20, height = 15, dpi = 300)
 ```
 
 ##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite and Possessive) and Phonological Overlap (Minimal Pair and Non Minimal Pair)
 
-```{r eval=T, echo=T, message=F, fig.width=20, fig.height=12}
+```{r eval=F, echo=T, message=F, fig.width=20, fig.height=12}
 fix.plot.phonol = ggplot() + 
   facet_wrap(~Determiner + SpeakerType + Phonol_Overlap, ncol=4,
              labeller = labeller(
@@ -540,13 +627,13 @@ fix.plot.phonol
 
 ##### Save the plot
 
-```{r eval=T, message=F}
+```{r eval=F, message=F}
 ggsave("plots/fixation_plot_phonol.png", width = 40, height = 15, dpi = 300)
 ```
 
 ##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite and Possessive), Phonological Overlap (Minimal Pair and Non Minimal Pair) and GenderMatch (D=T and D=C)
 
-```{r eval=T, echo=T, message=F, fig.width=20, fig.height=24}
+```{r eval=F, echo=T, message=F, fig.width=20, fig.height=24}
 fix.plot.fourgroups = ggplot() + 
   facet_wrap(~Determiner + SpeakerType + Phonol_Overlap + GenderMatch, ncol=4,
              labeller = labeller(
@@ -589,13 +676,13 @@ fix.plot.fourgroups
 
 ##### Save the plot
 
-```{r eval=T, message=F}
+```{r eval=F, message=F}
 ggsave("plots/fixation_plot_fourgroups.png", width = 40, height = 30, dpi = 300)
 ```
 
 ##### Plot mean fixation proportion to each AOI with standard error, dividing by SpeakerType (ASI and HSS), Determiner type (Definite and Possessive) and GenderMatch (D=T and D=C)
 
-```{r eval=T, echo=T, message=F, fig.width=20, fig.height=12}
+```{r eval=F, echo=T, message=F, fig.width=20, fig.height=12}
 fix.plot.gendermatch = ggplot() + 
   facet_wrap(~Determiner + SpeakerType + GenderMatch, ncol=4,
              labeller = labeller(
@@ -634,14 +721,14 @@ fix.plot.gendermatch
 
 ##### Save the plot
 
-```{r eval=T, message=F}
+```{r eval=F, message=F}
 ggsave("plots/fixation_plot_gendermatch.png", width = 40, height = 15, dpi = 300)
 ```
 
 ##### Combine Competitor and Distractor to create NonTarget columns and reduce the data set to two variables
 
 ```{r eval=T, message=F}
-fix.twovar <- fix.dat %>%
+fix.twovar <- fix.dat.full %>%
   mutate(NonTarget = Competitor + Distractor) %>%
   select(-Competitor, -Distractor)
 
@@ -667,25 +754,10 @@ fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 ##### UPDATE create a step function for the average FixP of all participants for each trial
 
 ```{r eval=T, message=F}
-# Define the number of pseudo-bins
-Npbins = 100
-win_start = 0
-win_end = 1400
-
-fix.twovar <- fix.twovar %>%
-  filter(TimeMS_adjusted >= win_start, TimeMS_adjusted <= win_end)
-
-# Group the fixation data by participant and trial)
-# Should probably start with fix.twovar instead?
-# fix.twovar.mean <- fix.twovar %>%
-#   group_by(Participant, AOI, SpeakerType, Determiner, TOI, TimeMS_adjusted) %>%
-#   summarise(FixP = mean(FixP, na.rm = TRUE), .groups = "drop")
-# 
-# summary(fix.twovar.mean)
-
-
-
 # Assuming fix.twovar has: Participant, TOI, TimeMS_adjusted, FixP, AOI
+
+# The number of pseudobins
+N_PBINS <- 100
 
 # Define windows for each trial
 # Compute trial-specific windows using EndingOffset_adjusted
@@ -697,14 +769,25 @@ trial_windows <- fix.twovar %>%
   ) %>%
   mutate(
     window_list = map(trial_duration, function(dur) {
-      edges <- seq(0, dur, length.out = Npbins + 1)
+      edges <- seq(0, dur, length.out = N_PBINS + 1)
       tibble(start = head(edges, -1), end = tail(edges, -1))
     })
   ) %>%
   unnest(window_list)
+
+# Group the fixation data by participant and trial)
+# Should probably start with fix.twovar instead?
+# fix.twovar.mean <- fix.twovar %>%
+#   group_by(Participant, AOI, SpeakerType, Determiner, TOI, TimeMS_adjusted) %>%
+#   summarise(FixP = mean(FixP, na.rm = TRUE), .groups = "drop")
+# 
+# summary(fix.twovar.mean)
 ```
 
+##### Functions to calculate the AUC
+
 ```{r eval=T, message=F}
+# Evaluate the AUC through integration; takes in a list of time points and corresponding FixPs
 calc_auc_fancy <- function(time, fixp) {
   valid <- !is.na(time) & !is.na(fixp)
   time <- time[valid]
@@ -714,26 +797,34 @@ calc_auc_fancy <- function(time, fixp) {
   integrate(f, lower = min(time), upper = max(time))$value
 }
 
+# Calculate the AUC for a specified time interval within a dataframe; the dataframe must have columns of TimeMS_adjusted and FixP
 calc_auc_interval <- function(df, start, end) {
+  # Create a subset of the dataframe based on start and end
   df_sub <- df %>%
     filter(TimeMS_adjusted >= start, TimeMS_adjusted < end)
+  # If there are more than two time points remaining, calculate the AUC in that interval
   if (nrow(df_sub) < 2) return(NA_real_)
   calc_auc_fancy(df_sub$TimeMS_adjusted, df_sub$FixP)
 }
 ```
 
-``` {r eval=T, message=F}
-# Compute trial-specific AUCs for each participant × AOI
-auc_trial_windows <- pmap_dfr(
-  trial_windows,
-  function(TOI, trial_duration, start, end) {
-    if (!TOI %in% fix.twovar$TOI) return(tibble())
-    df_trial <- fix.twovar %>% filter(TOI == "Trial14-pos-maestro_0")
-    if (nrow(df_trial) == 0) return(tibble())
+##### Compute trial-specific AUCs for each participant × AOI
 
-    df_trial %>%
+``` {r eval=T, message=F}
+# Create a test subset of fix.twovar with only one participant (and all the participant's trials)
+
+# Create a test subset of fix.twovar with only one trial (and all the trial's participants)
+
+auc_trial_windows <- pmap_dfr( # Uses purrr::pmap_dfr to iterate row-by-row over the tibble trial_windows, feeding each row’s columns as arguments to the anonymous function. It row-binds (_dfr) all returned tibbles into one data frame.
+  trial_windows, # Must be a tibble whose columns match the function’s argument names exactly: here, TOI, trial_duration, start, end. Each row represents a single trial × window interval.
+  function(TOI, trial_duration, start, end) { # The per-row function—receives scalars for the current trial id, its duration, and the window bounds.
+    if (!TOI %in% fix.twovar$TOI) return(tibble()) # Guard: if this trial id isn’t present in fix.twovar, skip this row by returning an empty tibble (which pmap_dfr will ignore).
+    df_trial <- fix.twovar %>% filter(TOI == !!TOI) # The !! (bang-bang) “injects” the scalar TOI value into the filter so it compares the column TOI to the current trial id. df_trial is a dataframe with all the rows from a trial in the original dataset
+    if (nrow(df_trial) == 0) return(tibble()) # Another guard: if this trial has no rows (e.g., filtered away earlier), skip.
+
+    df_trial %>% # For the current trial’s rows...
       group_by(Participant, AOI) %>%
-      summarise(AUC = calc_auc_interval(cur_data(), start, end), .groups = "drop") %>%
+      summarise(AUC = calc_auc_interval(pick(TimeMS_adjusted, FixP), start, end), .groups = "drop") %>%
       mutate(TOI = TOI, WindowStart = start, WindowEnd = end,
              WindowDur = end - start, AUC_prop = AUC / (end - start))
   }
@@ -853,7 +944,7 @@ plot(t_seq, f_step(t_seq),
 
 ##### Merge the non minimal pair values
 
-```{r eval=T, echo=T, message=F}
+```{r eval=F, echo=T, message=F}
 fix.twovar$Phonol_Overlap <- fix.twovar$Phonol_Overlap_T %>% fct_collapse(NonMinPair = c("First Syll-unstressed", "First Syll-stressed"))
 
 summary(fix.twovar)
