@@ -129,10 +129,12 @@ head(fix.dat)
 
 ##### Fill in the missing time points and add a trackloss column
 
-``` {r eval=T, echo=T, message=F}
+```{r eval=T, echo=T, message=F}
 # Step 1: Mark existing rows as Trackloss = 0
 # fix.dat$Trackloss <- 0
 # or not bc we already have a Trackloss column that is all FALSE
+
+# TODO figure out which participants did which trials
 
 # Step 1: Create complete time series
 all_times <- seq(
@@ -142,16 +144,16 @@ all_times <- seq(
 )
 ```
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 # Step 2: Make sure fix.dat$TimeMS_adjusted is numeric
 #fix.dat$TimeMS_adjusted <- as.numeric(fix.dat$TimeMS_adjusted)
 
 # Create every Participant x Trial combination
 participants <- unique(fix.dat$Participant)
-trials <- unique(fix.dat$TOI)
+TOIs <- unique(fix.dat$TOI)
 
 # Build a table with all 32 × 96 combinations
-all_combos <- expand_grid(Participant = participants, TOI = trials)
+all_combos <- expand_grid(Participant = participants, TOI = TOIs)
 
 # Expand to include every timepoint for every combination
 full_template <- all_combos %>%
@@ -248,6 +250,7 @@ write_csv(fix.dat.full, "data/fix_dat_filled.csv")
 ```
 
 ##### Trim data to analysis window
+
 ```{r eval=T}
 # Broad analysis window
 WINDOW_START <- -300
@@ -263,13 +266,18 @@ fix.dat.full <- fix.dat.full %>%
 fix.dat.full = fix.dat.full %>% mutate_at(vars(TOI, Participant), as.factor)
 TOIs <- sort(as.character(unique(fix.dat$TOI)))
 participants <- as.character(unique(fix.dat$Participant))
+
+# count how many unique participant–trial combinations exist in your dataset.
+# right now, it should be 96 trials * 32 participants = 3072
+# should actually be about half of this since half of the participants did half of the trials
 fix.dat.full %>%
   distinct(Participant, TOI) %>%
   nrow()
 ```
 
-##### Sanity check plot
-``` {r eval=T}
+##### Sanity check plot (step function plot for one participant and TOI)
+
+```{r eval=T}
 df_plot <- fix.dat.full %>%
   filter(Participant == "TA105", TOI == "Trial01-def-campesina_0") %>%
   select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
@@ -291,7 +299,8 @@ ggplot(df_plot, aes(x = TimeMS_adjusted, y = Fixation, color = AOI)) +
 ```
 
 ##### More sanity plotting
-``` {r eval=T}
+
+```{r eval=T}
 # Set a trial and participant to inspect
 trial_id <- "Trial01-def-campesina_0"
 participant_id <- "TA105"
@@ -313,20 +322,21 @@ ggplot(plot_df, aes(x = TimeMS_adjusted, y = FixP, color = AOI)) +
 ```
 
 ##### Average noun onset and ending offset because our window feels quite small
-``` {r eval=F}
+
+```{r eval=F}
 fix.dat.full %>%
   summarise(avg_onset = mean(unique(NounOnset_adjusted), na.rm = TRUE))
 fix.dat.full %>%
   summarise(avg_offset = mean(unique(EndingOffset_adjusted), na.rm = TRUE))
 ```
 
-
 # TODO don't forget to change fix.dat to fix.dat.full from this point onwards
 
-
 # NOTE this is probably a past attempt at normalization
+
 ##### Re-bin the fixation data and store it in a new dataframe
-``` {r eval=F, echo=T, message=F}
+
+```{r eval=F, echo=T, message=F}
 fix.rebinned <- data.frame()
 
 for (trial_id in TOIs[3:3]) {
@@ -418,19 +428,7 @@ for (trial_id in TOIs[3:3]) {
 }
 ```
 
-
-
-
-
-
-
-
-
-
-
-
 # NOTE Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums
-
 
 ##### Remove rows where the time bins are not 10ms
 
@@ -455,9 +453,7 @@ fix.dat.full <- fix.dat.full %>%
 
 ##### Reshape binomially encoded fixation data to a long format for plotting and analysis
 
-In the original experiment, the eyetracker takes 25 samples in each 50ms bin, and records the proportion of samples that fall in each AOI. Our eyetracker takes 1 sample in each 10ms bin, and records *which* AOI the sample falls in (we already removed the trackloss bins, so the sample must be in one of the 3 AOIs, and binomially encoded as 0 or 1).
-*Update* actually, now that we added the missing rows back in, there could be rows where FixP=0 in all 3 columns
-And the pivoted data should be fine after normalization - we'll just have rows with more than 1 non-zero AOI columns
+In the original experiment, the eyetracker takes 25 samples in each 50ms bin, and records the proportion of samples that fall in each AOI. Our eyetracker takes 1 sample in each 10ms bin, and records *which* AOI the sample falls in (we already removed the trackloss bins, so the sample must be in one of the 3 AOIs, and binomially encoded as 0 or 1). *Update* actually, now that we added the missing rows back in, there could be rows where FixP=0 in all 3 columns And the pivoted data should be fine after normalization - we'll just have rows with more than 1 non-zero AOI columns
 
 ```{r eval=T, echo=T, message=F}
 fix.long <- fix.dat.full %>%
@@ -490,9 +486,6 @@ fix.long = fix.long %>% mutate_at(vars(Participant, TOI, AreaFixated, SpeakerTyp
 ```{r eval=F, echo=T, message=F}
 fix.long$Phonol_Overlap <- fix.long$Phonol_Overlap_T %>% fct_collapse(NonMinPair = c("First Syll-unstressed", "First Syll-stressed"))
 ```
-
-
-
 
 ##### Change `Participant`, `TOI`, `AreaFixated`, `SpeakerType`, `AOI`, `Phonol_Overlap_T` and `GenderMatch` to factor
 
@@ -812,7 +805,8 @@ calc_auc_interval <- function(df, start, end) {
 ```
 
 ##### Test the AUC functions
-``` {r eval=T, message=F}
+
+```{r eval=T, message=F}
 # Create a subset of the timecourse data
 test_df <- fix.twovar %>%
   filter(Participant == "TA106",
@@ -830,7 +824,7 @@ calc_auc_interval(test_df, 310, 320)
 
 ##### Create test subsets
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 # Create a test subset of fix.twovar with only one participant (and all the participant's trials)
 fix.twovar.participant = fix.twovar %>% filter(Participant == "TA105", TOI == "Trial01-def-campesina_0")
 
@@ -840,7 +834,7 @@ fix.twovar.trial = fix.twovar %>% filter(TOI == "Trial01-def-campesina_0")
 
 ##### Compute trial-specific AUCs for each participant × AOI
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 auc_trial_windows <- pmap_dfr( # Uses purrr::pmap_dfr to iterate row-by-row over the tibble trial_windows, feeding each row’s columns as arguments to the anonymous function. It row-binds (_dfr) all returned tibbles into one data frame.
   trial_windows, # Must be a tibble whose columns match the function’s argument names exactly: here, TOI, trial_duration, start, end. Each row represents a single trial × window interval.
   function(TOI, trial_duration, start, end) { # The per-row function—receives scalars for the current trial id, its duration, and the window bounds, which are columns of trial_windows
@@ -867,13 +861,11 @@ auc_trial_windows <- pmap_dfr( # Uses purrr::pmap_dfr to iterate row-by-row over
 head(auc_trial_windows)
 ```
 
-
-
-# Take 2
+# Normalization take 2
 
 ##### Step 1: Create one step function per Participant × AOI × TOI
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 step_functions <- fix.twovar %>%
   group_by(Participant, AOI, TOI) %>%
   summarise(
@@ -889,14 +881,15 @@ step_functions <- fix.twovar %>%
 
 ##### Step 2: Compute AUCs from the stored step function
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 # Example: AUC from 0–400 ms for one participant-trial
 step_functions = step_functions %>% filter(Participant == "TA106", TOI == "Trial01-def-campesina_0") 
   # %>% mutate(AUC_0_5 = map_dbl(f, ~ integrate(.x, lower = 310, upper = 315)$value))
 ```
 
 ##### Step 3: Vectorize across many windows
-``` {r eval=T, message=F}
+
+```{r eval=T, message=F}
 # The number of pseudobins
 N_PBINS <- 100
 
@@ -940,7 +933,7 @@ auc_trial_windows <- step_functions %>%
   )
 ```
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 auc_trial_windows <- auc_trial_windows %>%
   group_by(Participant, TOI) %>%
   arrange(start, AOI, .by_group = TRUE) %>%
@@ -948,10 +941,9 @@ auc_trial_windows <- auc_trial_windows %>%
   ungroup()
 ```
 
-
 ##### Compute average AUCs across participants (for smooth plotting)
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 auc_summary <- auc_trial_windows %>%
   group_by(AOI, PBin) %>%
   summarise(
@@ -965,7 +957,7 @@ auc_summary <- auc_trial_windows %>%
 
 ##### Plot the summary of AUC proportions across trials and participants
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 ggplot(auc_summary, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
   geom_line(size = 1.2) +
   geom_ribbon(aes(ymin = mean_AUC_prop - se_AUC_prop, ymax = mean_AUC_prop + se_AUC_prop, fill = AOI),
@@ -982,12 +974,7 @@ ggplot(auc_summary, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) 
   theme_minimal(base_size = 16)
 ```
 
-
-
-
-
-
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 f_example <- step_functions %>%
   filter(Participant == "TA106", AOI == "Target", TOI == "Trial01-def-campesina_0") %>%
   pull(f) %>%
@@ -1001,11 +988,7 @@ plot(t_seq, f_example(t_seq),
      xlab = "Time (ms, adjusted)", ylab = "Fixation Probability")
 ```
 
-
-
-
-
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 # auc_by_participant_trial <- fix.twovar %>%
 #   group_by(Participant, TOI, AOI, SpeakerType, Determiner) %>% # here, we group by the variables that we will compare between later
 #   summarise(AUC = sum(FixP) * 10)
@@ -1058,7 +1041,7 @@ plot(t_seq, f_example(t_seq),
 #   ungroup()
 ```
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 # Define a function to make a step function for each participant and trial
 # make_stepfun <- function(time, fixp) {
 #   approxfun(x = time, y = fixp, method = "constant", rule = 2)
