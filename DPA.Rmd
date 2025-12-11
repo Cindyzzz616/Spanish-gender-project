@@ -117,6 +117,7 @@ installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
 
 ```{r eval=T, message=F}
 fix.dat = read_delim("/Users/cindyzhang/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
+fix.dat = fix.dat %>% mutate_at(vars(Timeline), as.factor)
 # all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
 ```
 
@@ -153,11 +154,14 @@ participants <- unique(fix.dat$Participant)
 TOIs <- unique(fix.dat$TOI)
 
 # Build a table with all 32 × 96 combinations
-all_combos <- expand_grid(Participant = participants, TOI = TOIs)
-
+all_combos <- fix.dat %>%
+  distinct(Participant, TOI)
 # Expand to include every timepoint for every combination
 full_template <- all_combos %>%
-  tidyr::expand(Participant, TOI, TimeMS_adjusted = all_times)
+  tidyr::expand(
+    tidyr::nesting(Participant, TOI),
+    TimeMS_adjusted = all_times
+  )
 ```
 
 ```{r eval=T, message=F}
@@ -167,10 +171,11 @@ trial_info <- fix.dat %>%
   filter(!is.na(Determiner)) %>%
   group_by(TOI) %>%
   summarise(
-    Determiner = first(Determiner),
-    SpeakerType = first(SpeakerType),
-    NounOnset_adjusted = first(NounOnset_adjusted),
-    EndingOffset_adjusted = first(EndingOffset_adjusted),
+    Determiner = unique(Determiner),
+    # NOTE don't think SpeakerType should be included in trial_info - it's not a property of a trial
+    # SpeakerType = first(SpeakerType),
+    NounOnset_adjusted = unique(NounOnset_adjusted),
+    EndingOffset_adjusted = unique(EndingOffset_adjusted),
     .groups = "drop"
   )
 
@@ -178,6 +183,8 @@ trial_info <- fix.dat %>%
 fix.dat.full <- full_template %>%
   left_join(fix.dat, by = c("Participant", "TOI", "TimeMS_adjusted"))
 ```
+
+#### Fill in missing information
 
 ```{r eval=T, message=F}
 # Merge it in and fill NAs
@@ -192,15 +199,26 @@ fix.dat.full <- fix.dat.full %>%
     
     # fill Determiner and other trial-level values
     Determiner = coalesce(Determiner, Determiner.trial),
-    SpeakerType = coalesce(SpeakerType, SpeakerType.trial),
+    
+    # TODO not sure why we can't fill in SpeakerType: Error in `mutate()`:
+# ℹ In argument: `SpeakerType = coalesce(SpeakerType,
+#   SpeakerType.trial)`.
+# Caused by error:
+# ! object 'SpeakerType.trial' not found
+
+    # SpeakerType = coalesce(SpeakerType, SpeakerType.trial),
     NounOnset_adjusted = coalesce(NounOnset_adjusted, NounOnset_adjusted.trial),
     EndingOffset_adjusted = coalesce(EndingOffset_adjusted, EndingOffset_adjusted.trial)
   ) %>%
-  select(-any_of(c("Determiner.trial", "SpeakerType.trial",
-                   "NounOnset_adjusted.trial", "EndingOffset_adjusted.trial")))
+  select(-any_of(c("Determiner.trial", 
+                   # "SpeakerType.trial",
+                   "NounOnset_adjusted.trial", 
+                   "EndingOffset_adjusted.trial")))
+```
 
-### Sanity checks
+#### Sanity checks
 
+```{r eval=T, message=F}
 # Check that everyone now has 743 bins
 fix.dat.full %>%
   group_by(Participant, TOI) %>%
@@ -216,10 +234,16 @@ fix.dat.full %>%
 range(fix.dat.full$TimeMS_adjusted)
 # [1] -2670  4750
 
-# Check a formerly missing case
+# Check a participant-trial pair where timepoints were formerly missing
 fix.dat.full %>%
   filter(Participant == "TA106", TOI == "Trial01-def-campesina_0") %>%
   summarise(min_time = min(TimeMS_adjusted), max_time = max(TimeMS_adjusted))
+
+# Check a participant-trial pair that's not supposed to be there (to make sure we didn't invent anything)
+fix.dat.full %>%
+  filter(Participant == "TA105", TOI == "Trial01-pos-campesina_0") %>%
+  summarise(min_time = min(TimeMS_adjusted), max_time = max(TimeMS_adjusted))
+# Should return Inf and -Inf
 
 # Save this complete dataset
 write_csv(fix.dat.full, "data/fix_dat_filled.csv")
