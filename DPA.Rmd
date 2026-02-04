@@ -18,9 +18,9 @@ This R script generates time-course plots of mean fixation proportion, and perfo
 
 The columns in the original eye-tracking data set are:
 
--   TOI: trial of interest
+-   TOI: trial of interest. There are 48 trials in Version A and 48 trials in Version B.
 
--   Participant: the code for a participant
+-   Participant: the code for a participant. There are 32 participants in total; half the participants were assigned to Version A trials and half were assigned to Version B trials.
 
 -   Timeline: the version of the experiment
 
@@ -113,11 +113,11 @@ require(purrr)
 installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
 ```
 
-##### Read the time-course output data of the eyetracker from file
+##### Read the time-course output data of the eye-tracker from file
 
 ```{r eval=T, message=F}
-fix.dat = read_delim("/Users/cindyzhang/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
-fix.dat = fix.dat %>% mutate_at(vars(Timeline), as.factor)
+fix.dat = read_delim("data-2025-03-12/df_cleaned.csv", delim=',')
+fix.dat = fix.dat %>% mutate_at(vars(Timeline), as.factor) # TODO not sure why this is changed into a factor now
 # all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
 ```
 
@@ -128,24 +128,54 @@ summary(fix.dat)
 head(fix.dat)
 ```
 
+##### Examine which participants did which trials
+
+```{r eval=T}
+pt_matrix <- fix.dat %>%
+  distinct(Participant, TOI) %>%
+  mutate(did_trial = 1) %>%
+  tidyr::pivot_wider(
+    names_from = TOI,
+    values_from = did_trial,
+    values_fill = 0
+  )
+
+pt_matrix
+```
+
 ##### Fill in the missing time points and add a trackloss column
 
 ```{r eval=T, echo=T, message=F}
-# Step 1: Mark existing rows as Trackloss = 0
-# fix.dat$Trackloss <- 0
-# or not bc we already have a Trackloss column that is all FALSE
+# Step 1: Create complete time series based on the window of interest
+# for all the possible time bins, use min(fix.dat$TimeMS_adjusted) and max(fix.dat$TimeMS_adjusted)
 
-# TODO figure out which participants did which trials
-
-# Step 1: Create complete time series
+WINDOW_START <- min(fix.dat$TimeMS_adjusted)
+WINDOW_END <- max(fix.dat$TimeMS_adjusted)
 all_times <- seq(
-  min(fix.dat$TimeMS_adjusted),
-  max(fix.dat$TimeMS_adjusted),
+  WINDOW_START,
+  WINDOW_END,
   by = 10
 )
+
+# Step 2: record the participant-trial pairs that actually occurred in the raw data
+observed_combos <- fix.dat %>%
+  distinct(Participant, TOI)
+
+# Step 3: fill in the missing time points for those participant-trial combos
+full_template <- observed_combos %>%
+  tidyr::expand(
+    tidyr::nesting(Participant, TOI),
+    TimeMS_adjusted = all_times
+  )
+
+# Step 4: left-join raw data onto the template
+fix.dat.full <- full_template %>%
+  left_join(fix.dat, by = c("Participant", "TOI", "TimeMS_adjusted"))
 ```
 
-```{r eval=T, message=F}
+##### THE FOLLOWING IS BAD BECAUSE WE DON'T WANT TO FILL IN MISSING TIME POINTS FOR TRIALS A PARTICIPANT DID NOT DO {style="color: red"}
+
+```{r eval=F, message=F}
 # Step 2: Make sure fix.dat$TimeMS_adjusted is numeric
 #fix.dat$TimeMS_adjusted <- as.numeric(fix.dat$TimeMS_adjusted)
 
@@ -156,7 +186,8 @@ TOIs <- unique(fix.dat$TOI)
 # Build a table with all 32 × 96 combinations
 all_combos <- fix.dat %>%
   distinct(Participant, TOI)
-# Expand to include every timepoint for every combination
+
+# Expand to include every time point for every combination
 full_template <- all_combos %>%
   tidyr::expand(
     tidyr::nesting(Participant, TOI),
@@ -164,27 +195,24 @@ full_template <- all_combos %>%
   )
 ```
 
+##### Build a unique trial info table
+
 ```{r eval=T, message=F}
-# Build a unique trial info table
-# NOTE could add other trial variables as needed
+# TODO could add other trial variables as needed - if we are comparing by those variables
 trial_info <- fix.dat %>%
   filter(!is.na(Determiner)) %>%
   group_by(TOI) %>%
   summarise(
     Determiner = unique(Determiner),
-    # NOTE don't think SpeakerType should be included in trial_info - it's not a property of a trial
+    # TODO don't think SpeakerType should be included in trial_info - it's not a property of a trial
     # SpeakerType = first(SpeakerType),
     NounOnset_adjusted = unique(NounOnset_adjusted),
     EndingOffset_adjusted = unique(EndingOffset_adjusted),
     .groups = "drop"
   )
-
-# Step 2: Join with raw data
-fix.dat.full <- full_template %>%
-  left_join(fix.dat, by = c("Participant", "TOI", "TimeMS_adjusted"))
 ```
 
-#### Fill in missing information
+##### Fill in missing information
 
 ```{r eval=T, message=F}
 # Merge it in and fill NAs
@@ -219,16 +247,16 @@ fix.dat.full <- fix.dat.full %>%
 #### Sanity checks
 
 ```{r eval=T, message=F}
-# Check that everyone now has 743 bins
+# Check that everyone now has 171 bins
 fix.dat.full %>%
   group_by(Participant, TOI) %>%
   summarise(n_bins = n()) %>%
   summarise(
-    n_missing = sum(n_bins != 743),
+    n_missing = sum(n_bins != 171),
     mean_bins = mean(n_bins)
   )
 # n_missing = 0
-# mean_bins = 743
+# mean_bins = 171
 
 # Check the time range
 range(fix.dat.full$TimeMS_adjusted)
@@ -273,18 +301,7 @@ write_csv(fix.dat.full, "data/fix_dat_filled.csv")
 #   ungroup()
 ```
 
-##### Trim data to analysis window
-
-```{r eval=T}
-# Broad analysis window
-WINDOW_START <- -300
-WINDOW_END <- 1400
-
-fix.dat.full <- fix.dat.full %>%
-  filter(TimeMS_adjusted >= WINDOW_START, TimeMS_adjusted <= WINDOW_END)
-```
-
-##### Change `TOI` and `Participant` to factor and create a list of all trial IDs and participants
+##### Change `TOI` and `Participant` to factor
 
 ```{r eval=T, echo=T, message=F}
 fix.dat.full = fix.dat.full %>% mutate_at(vars(TOI, Participant), as.factor)
@@ -292,32 +309,37 @@ TOIs <- sort(as.character(unique(fix.dat$TOI)))
 participants <- as.character(unique(fix.dat$Participant))
 
 # count how many unique participant–trial combinations exist in your dataset.
-# right now, it should be 96 trials * 32 participants = 3072
-# should actually be about half of this since half of the participants did half of the trials
-fix.dat.full %>%
-  distinct(Participant, TOI) %>%
-  nrow()
+# it should be 96/2=48 trials * 32 participants = 1536, it seems like 4 combinations are missing because observed_combos has 1532 rows
 ```
 
 ##### Sanity check plot (step function plot for one participant and TOI)
 
 ```{r eval=T}
 df_plot <- fix.dat.full %>%
-  filter(Participant == "TA105", TOI == "Trial01-def-campesina_0") %>%
+  filter(Participant == "TA105", TOI == "Trial02-def-perro_0") %>%
   select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
   pivot_longer(cols = c(Target, Competitor, Distractor),
                names_to = "AOI", values_to = "Fixation")
 
 library(ggplot2)
 
+vline_df <- tibble::tibble(
+  time = c(108, 551),
+  event = c("Noun onset", "Ending offset")
+)
+
 ggplot(df_plot, aes(x = TimeMS_adjusted, y = Fixation, color = AOI)) +
   geom_step(size = 0.8) +
+  geom_vline(
+    data = vline_df,
+    aes(xintercept=time, linetype=event),
+    color="black",
+    linewidth=0.8
+  )
   labs(title = "Binary Fixations by AOI",
        subtitle = "Participant TA105 – Trial02-def-perro_0",
        x = "Time (ms)",
        y = "Fixated (0/1)") +
-  geom_vline(xintercept = 108, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 551, linetype = "dotted", color = "black") +
   theme_minimal()
 
 ```
