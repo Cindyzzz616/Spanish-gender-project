@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Divergence Point Analysis on Eye-tracking Data
 
-This R script generates timecourse plots of mean fixation proportion, and performs a statistical analysis to determine divergence points between fixations on different objects. It is adapted from the R script in the paper "Analysing data from the psycholinguistic visual‑world paradigm: Comparison of different analysis methods", Ito & Knoeferle (2023).
+This R script generates time-course plots of mean fixation proportion, and performs a statistical analysis to determine divergence points between fixations on different objects. It is adapted from the R script in the paper "Analyzing data from the psycholinguistic visual‑world paradigm: Comparison of different analysis methods", Ito & Knoeferle (2023).
 
 The columns in the original eye-tracking data set are:
 
