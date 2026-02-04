@@ -796,7 +796,7 @@ fix.twovar <- fix.twovar %>%
 fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 ```
 
-### UPDATE create a step function for the average FixP of all participants for each trial. Right now, we are stretching the portion between determiner onset (time=0) and noun offset (ending offset). We *will* need to do this twice eventually, splitting the time-course data at *noun onset*.
+### MIGHT BE DISCARDED create a step function for the average FixP of all participants for each trial. Right now, we are stretching the portion between determiner onset (time=0) and noun offset (ending offset). We *will* need to do this twice eventually, splitting the time-course data at *noun onset*. {style="color:red"}
 
 ##### Define windows for each trial
 
@@ -924,6 +924,8 @@ head(auc_trial_windows)
 
 # I think the part below is the part that actually works
 
+## 
+
 ##### Step 1: Create one step function per Participant × AOI × TOI
 
 ```{r eval=T, message=F}
@@ -948,17 +950,19 @@ step_functions = step_functions %>% filter(Participant == "TA106", TOI == "Trial
   # %>% mutate(AUC_0_5 = map_dbl(f, ~ integrate(.x, lower = 310, upper = 315)$value))
 ```
 
+## Let's do it for determiners first
+
 ##### Step 2: Define windows for each trial
 
 ```{r eval=T, message=F}
 # The number of pseudobins
 N_PBINS <- 100
 
-# Compute trial-specific windows using EndingOffset_adjusted
-trial_windows <- fix.twovar %>%
+# Compute trial-specific windows using NounOnset_adjusted
+trial_windows_det <- fix.twovar %>%
   group_by(TOI) %>%
   summarise(
-    trial_duration = max(EndingOffset_adjusted, na.rm = TRUE),
+    trial_duration = max(NounOnset_adjusted, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   mutate(
@@ -983,8 +987,8 @@ trial_windows <- fix.twovar %>%
 ##### Step 3: Compute AUCs for all step functions
 
 ```{r}
-auc_trial_windows <- step_functions %>%
-  left_join(trial_windows, by = "TOI", relationship = "many-to-many") %>%
+auc_trial_windows_det <- step_functions %>%
+  left_join(trial_windows_det, by = "TOI", relationship = "many-to-many") %>%
   mutate(
     AUC = pmap_dbl(
       list(f, start, end),
@@ -1000,17 +1004,17 @@ auc_trial_windows <- step_functions %>%
 ##### Step 4: add pseudo-bin numbers
 
 ```{r eval=T, message=F}
-auc_trial_windows <- auc_trial_windows %>%
+auc_trial_windows_det <- auc_trial_windows_det %>%
   group_by(Participant, TOI) %>%
   arrange(start, AOI, .by_group = TRUE) %>%
   mutate(PBin = rep(1:100, each = length(unique(AOI)), length.out = n())) %>%
   ungroup()
 ```
 
-##### Compute average AUCs across participants (for smooth plotting)
+##### Step 5: Compute average AUCs across participants (for smooth plotting)
 
 ```{r eval=T, message=F}
-auc_summary <- auc_trial_windows %>%
+auc_summary_det <- auc_trial_windows_det %>%
   group_by(AOI, PBin) %>%
   summarise(
     mean_AUC = mean(AUC, na.rm = TRUE),
@@ -1021,17 +1025,17 @@ auc_summary <- auc_trial_windows %>%
   )
 ```
 
-##### Plot the summary of AUC proportions across trials and participants
+##### Step 6: Plot the summary of AUC proportions across trials and participants
 
 ```{r eval=T, message=F}
-ggplot(auc_summary, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
+ggplot(auc_summary_det, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
   geom_line(size = 1.2) +
   geom_ribbon(aes(ymin = mean_AUC_prop - se_AUC_prop, ymax = mean_AUC_prop + se_AUC_prop, fill = AOI),
               alpha = 0.2, color = NA) +
   scale_color_manual(values = c("Target" = "#ffac00", "NonTarget" = "#002e65")) +
   scale_fill_manual(values = c("Target" = "#ffac00", "NonTarget" = "#002e65")) +
   labs(
-    title = "Mean AUC over Time",
+    title = "Mean AUC over Time for Determiners",
     x = "Pseudo-bin",
     y = "AUC proportions",
     color = "AOI",
@@ -1039,6 +1043,136 @@ ggplot(auc_summary, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) 
   ) +
   theme_minimal(base_size = 16)
 ```
+
+## Now do it for noun portions
+
+##### Step 2: Define windows for each trial
+
+```{r eval=T, message=F}
+# The number of pseudobins
+N_PBINS <- 100
+
+trial_windows_noun <- fix.twovar %>%
+  group_by(TOI) %>%
+  summarise(
+    start_anchor = min(NounOnset_adjusted, na.rm = TRUE),
+    end_anchor   = max(EndingOffset_adjusted, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    window_list = map2(start_anchor, end_anchor, function(start, end) {
+      edges <- seq(start, end, length.out = N_PBINS + 1)
+      tibble(start = head(edges, -1), end = tail(edges, -1))
+    })
+  ) %>%
+  unnest(window_list)
+
+```
+
+##### Step 3: Compute AUCs for all step functions
+
+```{r}
+auc_trial_windows_noun <- step_functions %>%
+  left_join(trial_windows_noun, by = "TOI", relationship = "many-to-many") %>%
+  mutate(
+    AUC = pmap_dbl(
+      list(f, start, end),
+      function(fun, start, end) {
+        integrate(fun, lower = start, upper = end)$value
+      }
+    ),
+    WindowDur = end - start,
+    AUC_prop = AUC / WindowDur
+  )
+```
+
+##### Step 4: add pseudo-bin numbers
+
+```{r eval=T, message=F}
+auc_trial_windows_noun <- auc_trial_windows_noun %>%
+  group_by(Participant, TOI) %>%
+  arrange(start, AOI, .by_group = TRUE) %>%
+  mutate(PBin = rep(1:100, each = length(unique(AOI)), length.out = n())) %>%
+  ungroup()
+```
+
+##### Step 5: Compute average AUCs across participants (for smooth plotting)
+
+```{r eval=T, message=F}
+auc_summary_noun <- auc_trial_windows_noun %>%
+  group_by(AOI, PBin) %>%
+  summarise(
+    mean_AUC = mean(AUC, na.rm = TRUE),
+    se_AUC = sd(AUC, na.rm = TRUE) / sqrt(n()),
+    mean_AUC_prop = mean(AUC_prop, na.rm = TRUE),
+    se_AUC_prop = sd(AUC_prop, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+```
+
+##### Step 6: Plot the summary of AUC proportions across trials and participants
+
+```{r eval=T, message=F}
+ggplot(auc_summary_noun, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
+  geom_line(size = 1.2) +
+  geom_ribbon(aes(ymin = mean_AUC_prop - se_AUC_prop, ymax = mean_AUC_prop + se_AUC_prop, fill = AOI),
+              alpha = 0.2, color = NA) +
+  scale_color_manual(values = c("Target" = "#ffac00", "NonTarget" = "#002e65")) +
+  scale_fill_manual(values = c("Target" = "#ffac00", "NonTarget" = "#002e65")) +
+  labs(
+    title = "Mean AUC over Time for Nouns",
+    x = "Pseudo-bin",
+    y = "AUC proportions",
+    color = "AOI",
+    fill = "AOI"
+  ) +
+  theme_minimal(base_size = 16)
+```
+
+##### Step 7: Concatenate the two plots
+
+```{r}
+# Step 1: Shift the noun pseudo-bins
+auc_summary_noun_shifted <- auc_summary_noun %>%
+  mutate(PBin = PBin + 100)
+```
+
+```{r}
+# Step 2: Combine determiner + noun data
+auc_combined <- bind_rows(
+  auc_summary_det,
+  auc_summary_noun_shifted
+)
+```
+
+```{r}
+# Step 3: Plot (almost exactly your original code)
+ggplot(auc_combined,
+       aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
+  geom_line(linewidth = 1.2) +
+  geom_ribbon(
+    aes(ymin = mean_AUC_prop - se_AUC_prop,
+        ymax = mean_AUC_prop + se_AUC_prop,
+        fill = AOI),
+    alpha = 0.2,
+    color = NA
+  ) +
+  scale_color_manual(values = c("Target" = "#ffac00",
+                                "NonTarget" = "#002e65")) +
+  scale_fill_manual(values = c("Target" = "#ffac00",
+                               "NonTarget" = "#002e65")) +
+  labs(
+    title = "Mean AUC over Time: Determiner → Noun",
+    x = "Pseudo-bin (normalized time)",
+    y = "AUC proportion",
+    color = "AOI",
+    fill = "AOI"
+  ) +
+  theme_minimal(base_size = 16)
+
+```
+
+##### Plots of step functions for individual participant-trials
 
 ```{r eval=T, message=F}
 f_example <- step_functions %>%
