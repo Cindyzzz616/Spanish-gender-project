@@ -380,7 +380,7 @@ fix.dat.full %>%
 
 # NOTE this is probably a past attempt at normalization
 
-##### Re-bin the fixation data and store it in a new dataframe
+##### IGNORE: Re-bin the fixation data and store it in a new dataframe {style="color: red"}
 
 ```{r eval=F, echo=T, message=F}
 fix.rebinned <- data.frame()
@@ -474,16 +474,18 @@ for (trial_id in TOIs[3:3]) {
 }
 ```
 
-# NOTE Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums
+# NOTE Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums (right now it seems to be left edge)
 
-##### Remove rows where the time bins are not 10ms
+# Another note: we are ignoring the code from this point until the new normalization part {style="color:red"}
+
+##### Remove rows where the time bins are not 10ms {style="color:red"}
 
 ```{r eval=F, message=F}
 fix.dat <- fix.dat %>% filter(Bin_duration == 10)
 # TODO not sure if we should still do that
 ```
 
-##### Add AreaFixated column
+##### Add AreaFixated column {style="color:red"}
 
 ```{r eval=T, message=F}
 fix.dat.full <- fix.dat.full %>%
@@ -495,9 +497,10 @@ fix.dat.full <- fix.dat.full %>%
   ))
 # TODO no more AreaFixated because there can be multiple in one pseudo-bin. Need to find out if we can still pivot the data to a long format
 # This is done later anyway, with fix.long
+# for now we WILL do this step so the twovar step works
 ```
 
-##### Reshape binomially encoded fixation data to a long format for plotting and analysis
+##### Reshape binomially encoded fixation data to a long format for plotting and analysis {style="color:green"}
 
 In the original experiment, the eyetracker takes 25 samples in each 50ms bin, and records the proportion of samples that fall in each AOI. Our eyetracker takes 1 sample in each 10ms bin, and records *which* AOI the sample falls in (we already removed the trackloss bins, so the sample must be in one of the 3 AOIs, and binomially encoded as 0 or 1). *Update* actually, now that we added the missing rows back in, there could be rows where FixP=0 in all 3 columns And the pivoted data should be fine after normalization - we'll just have rows with more than 1 non-zero AOI columns
 
@@ -510,7 +513,7 @@ fix.long <- fix.dat.full %>%
   )
 ```
 
-##### Add GenderMatch column
+##### Add GenderMatch column {style="color:red"}
 
 ```{r eval=F, echo=T, message=F}
 # NOTE we didn't coalesce N_Gender_D, etc yet when we were filling in the missing rows
@@ -764,7 +767,9 @@ fix.plot.gendermatch
 ggsave("plots/fixation_plot_gendermatch.png", width = 40, height = 15, dpi = 300)
 ```
 
-##### Combine Competitor and Distractor to create NonTarget columns and reduce the data set to two variables
+# Normalization take 2
+
+### Combine Competitor and Distractor to create NonTarget columns and reduce the data set to two variables - this we do need to do
 
 ```{r eval=T, message=F}
 fix.twovar <- fix.dat.full %>%
@@ -775,6 +780,7 @@ fix.twovar <- fix.twovar %>%
   mutate(AreaFixated = ifelse(AreaFixated == "Target", "Target", "NonTarget"))
 
 fix.twovar$AreaFixated <- as.factor(fix.twovar$AreaFixated)
+# TODO right now we are NOT distinguishing between NonTarget and Trackloss
 ```
 
 ##### Pivot binomially encoded columns
@@ -790,7 +796,9 @@ fix.twovar <- fix.twovar %>%
 fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 ```
 
-##### UPDATE create a step function for the average FixP of all participants for each trial
+### UPDATE create a step function for the average FixP of all participants for each trial. Right now, we are stretching the portion between determiner onset (time=0) and noun offset (ending offset). We *will* need to do this twice eventually, splitting the time-course data at *noun onset*.
+
+##### Define windows for each trial
 
 ```{r eval=T, message=F}
 # Assuming fix.twovar has: Participant, TOI, TimeMS_adjusted, FixP, AOI
@@ -798,7 +806,6 @@ fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 # The number of pseudobins
 N_PBINS <- 100
 
-# Define windows for each trial
 # Compute trial-specific windows using EndingOffset_adjusted
 trial_windows <- fix.twovar %>%
   group_by(TOI) %>%
@@ -833,7 +840,9 @@ calc_auc_fancy <- function(time, fixp) {
   fixp <- fixp[valid]
   if (length(time) < 2) return(NA_real_)
   f <- approxfun(x = time, y = fixp, method = "constant", rule = 2)
+  # TODO rule=2 has something to do with constant extrapolation - extending the boundary values beyond the data range. Might be important in figuring out how to account for trackloss rows
   integrate(f, lower = min(time), upper = max(time))$value
+  # TODO consider calculating the AUC manually as a weighted sum: If widths vary, AUC = sum(FixP[i] * (time[i+1]-time[i])).
 }
 
 # Calculate the AUC for a specified time interval within a dataframe; the dataframe must have columns of TimeMS_adjusted and FixP
@@ -841,8 +850,14 @@ calc_auc_interval <- function(df, start, end) {
   df_sub <- df %>%
     filter(TimeMS_adjusted >= start, TimeMS_adjusted < end)
 
-  if (nrow(df_sub) < 2) { # NOTE why does it have to be nrow(df_sub) < 2?
-    print("Empty subset for window ", start, "-", end, " (n = ", nrow(df_sub), ")")
+  if (nrow(df_sub) < 2) { # if there's only one sample
+    print(
+      paste0(
+        "Empty subset for window ",
+        start, "-", end,
+        " (n = ", nrow(df_sub), ")"
+      )
+    )
     return(NA_real_)
   }
 
@@ -855,23 +870,23 @@ calc_auc_interval <- function(df, start, end) {
 ```{r eval=T, message=F}
 # Create a subset of the timecourse data
 test_df <- fix.twovar %>%
-  filter(Participant == "TA106",
+  filter(Participant == "TA105",
          AOI == "Target",
          TOI == "Trial01-def-campesina_0")
 
 # Check its time range
 range(test_df$TimeMS_adjusted)
 
-test_df %>%
-  filter(TimeMS_adjusted >= 0, TimeMS_adjusted < 10)
+# test_df %>%
+#   filter(TimeMS_adjusted >= 1000, TimeMS_adjusted < 1010)
 
-calc_auc_interval(test_df, 310, 320)
+calc_auc_interval(test_df, 1000, 1030)
 ```
 
 ##### Create test subsets
 
 ```{r eval=T, message=F}
-# Create a test subset of fix.twovar with only one participant (and all the participant's trials)
+# Create a test subset of fix.twovar with only one participant (and one of the participant's trials)
 fix.twovar.participant = fix.twovar %>% filter(Participant == "TA105", TOI == "Trial01-def-campesina_0")
 
 # Create a test subset of fix.twovar with only one trial (and all the trial's participants)
@@ -907,7 +922,7 @@ auc_trial_windows <- pmap_dfr( # Uses purrr::pmap_dfr to iterate row-by-row over
 head(auc_trial_windows)
 ```
 
-# Normalization take 2
+# I think the part below is the part that actually works
 
 ##### Step 1: Create one step function per Participant × AOI × TOI
 
@@ -925,21 +940,20 @@ step_functions <- fix.twovar %>%
   )
 ```
 
-##### Step 2: Compute AUCs from the stored step function
+##### Example for one participant-trial (don't run this)
 
-```{r eval=T, message=F}
+```{r eval=F, message=F}
 # Example: AUC from 0–400 ms for one participant-trial
 step_functions = step_functions %>% filter(Participant == "TA106", TOI == "Trial01-def-campesina_0") 
   # %>% mutate(AUC_0_5 = map_dbl(f, ~ integrate(.x, lower = 310, upper = 315)$value))
 ```
 
-##### Step 3: Vectorize across many windows
+##### Step 2: Define windows for each trial
 
 ```{r eval=T, message=F}
 # The number of pseudobins
 N_PBINS <- 100
 
-# Define windows for each trial
 # Compute trial-specific windows using EndingOffset_adjusted
 trial_windows <- fix.twovar %>%
   group_by(TOI) %>%
@@ -964,7 +978,11 @@ trial_windows <- fix.twovar %>%
 #     AUC_prop = AUC / WindowDur
 #   )
 
-# Compute AUCs for all step functions
+```
+
+##### Step 3: Compute AUCs for all step functions
+
+```{r}
 auc_trial_windows <- step_functions %>%
   left_join(trial_windows, by = "TOI", relationship = "many-to-many") %>%
   mutate(
@@ -978,6 +996,8 @@ auc_trial_windows <- step_functions %>%
     AUC_prop = AUC / WindowDur
   )
 ```
+
+##### Step 4: add pseudo-bin numbers
 
 ```{r eval=T, message=F}
 auc_trial_windows <- auc_trial_windows %>%
