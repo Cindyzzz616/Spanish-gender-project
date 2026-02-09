@@ -1,7 +1,10 @@
 # Divergence Point Analysis (DPA) for Eye-Tracking Data
-![Bilinguals in Toronto logo](images/bilinguals_in_toronto.png)
-![University of Toronto logo](images/uoft_logo.png)
-
+<div style="display: flex; gap: 100px; justify-content: center;">
+  <img src="images/bilinguals_in_toronto.png" width="300" style="margin-right: 200px;">
+  <img src="images/uoft_logo.png" width="300">
+</div>
+<br>
+<br>
 
 This repository contains an R pipeline for performing **Divergence Point Analysis (DPA)** on visual-world eye-tracking data. The script generates time-course plots of fixation proportions and estimates the time at which looks to the target diverge reliably from looks to non-target objects using bootstrap-based statistical testing.
 
