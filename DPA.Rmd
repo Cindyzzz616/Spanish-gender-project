@@ -125,6 +125,23 @@ summary(fix.dat)
 head(fix.dat)
 ```
 
+### Define constants
+
+```{r}
+# Window of interest (in milliseconds)
+WINDOW_START <- -300
+WINDOW_END <- 1400
+
+# Number of pseudobins for normalization
+N_PBINS = 100
+
+# Number of consecutive statistically significant time bins required to establish divergence
+Nbins = 20
+
+# Number of bootstrap iterations
+Niter = 100L
+```
+
 ### Examine which participants did which trials
 
 ```{r eval=F}
@@ -146,8 +163,6 @@ pt_matrix
 # Step 1: Create complete time series based on the window of interest
 # If we want all the possible time bins instead, we use min(fix.dat$TimeMS_adjusted) and max(fix.dat$TimeMS_adjusted)
 
-WINDOW_START <- -300
-WINDOW_END <- 1400
 all_times <- seq(
   WINDOW_START,
   WINDOW_END,
@@ -336,9 +351,9 @@ fix.dat.full %>%
   summarise(avg_offset = mean(unique(EndingOffset_adjusted), na.rm = TRUE))
 ```
 
-# TODO don't forget to change fix.dat to fix.dat.full from this point onwards
+TODO don't forget to change fix.dat to fix.dat.full from this point onwards
 
-# NOTE Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums (right now it seems to be left edge)
+NOTE Should we take the time points to be the left edge, middle or right edge of the step function? Like how you'd take left-handed vs right-handed vs middle Riemann sums (right now it seems to be left edge)
 
 ### Reshape binomially encoded fixation data to a long format for plotting and analysis
 
@@ -398,6 +413,10 @@ fix.twovar = fix.twovar %>% mutate_at(vars(AOI), as.factor)
 ### Create one step function per Participant × AOI × TOI
 
 ```{r}
+# Make sure FixP is not a factor
+fix.twovar <- fix.twovar %>%
+  mutate(FixP = as.numeric(as.character(FixP)))
+
 step_functions <- fix.twovar %>%
   group_by(Participant, AOI, TOI) %>%
   summarise(
@@ -411,12 +430,35 @@ step_functions <- fix.twovar %>%
   )
 ```
 
-#### Example for one participant-trial
+#### Plot the step function for one participant-trial
 
 ```{r eval=F}
-# Example: AUC from 0–400 ms for one participant-trial
-step_functions = step_functions %>% filter(Participant == "TA106", TOI == "Trial01-def-campesina_0") 
-  # %>% mutate(AUC_0_5 = map_dbl(f, ~ integrate(.x, lower = 310, upper = 315)$value))
+step_functions_example = step_functions %>% filter(Participant == "TA106", TOI == "Trial01-def-campesina_0") 
+
+time_grid <- seq(WINDOW_START, WINDOW_END, by = 10)
+
+library(purrr)
+
+plot_df <- step_functions_example %>%
+  mutate(
+    data = map(f, ~ tibble(
+      TimeMS_adjusted = time_grid,
+      FixP = .x(time_grid)
+    ))
+  ) %>%
+  unnest(data)
+
+library(ggplot2)
+
+ggplot(plot_df, aes(TimeMS_adjusted, FixP, colour = AOI)) +
+  geom_step(linewidth = 1) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme_bw() +
+  labs(
+    x = "Time (ms)",
+    y = "FixP",
+    title = "Step function: TA106 Trial01-def-campesina_0"
+  )
 ```
 
 ### Normalization for determiner portion
@@ -424,9 +466,6 @@ step_functions = step_functions %>% filter(Participant == "TA106", TOI == "Trial
 #### Define windows for each trial
 
 ```{r eval=T, message=F}
-# The number of pseudobins
-N_PBINS <- 1000
-
 # Compute trial-specific windows
 trial_windows_det <- fix.twovar %>%
   group_by(TOI) %>%
@@ -494,7 +533,7 @@ auc_summary_det <- auc_trial_windows_det %>%
 
 #### Plot the summary of AUC proportions across trials and participants
 
-```{r eval=T, message=F}
+```{r eval=F}
 ggplot(auc_summary_det, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
   geom_line(size = 1.2) +
   geom_ribbon(aes(ymin = mean_AUC_prop - se_AUC_prop, ymax = mean_AUC_prop + se_AUC_prop, fill = AOI),
@@ -516,9 +555,6 @@ ggplot(auc_summary_det, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AO
 #### Define windows for each trial
 
 ```{r eval=T, message=F}
-# The number of pseudobins
-N_PBINS <- 1000
-
 trial_windows_noun <- fix.twovar %>%
   group_by(TOI) %>%
   summarise(
@@ -565,7 +601,7 @@ auc_trial_windows_noun <- step_functions %>%
 auc_trial_windows_noun <- auc_trial_windows_noun %>%
   group_by(Participant, TOI, SpeakerType, Determiner, Phonol_Overlap_T) %>%
   arrange(start, AOI, .by_group = TRUE) %>%
-  mutate(PBin = rep(1:N_PBINS, each = length(unique(AOI)), length.out = n())) %>%
+  mutate(PBin = rep(1:N_PBINS, each = length(unique(AOI)), length.out = n()) + N_PBINS) %>%
   ungroup()
 ```
 
@@ -585,7 +621,7 @@ auc_summary_noun <- auc_trial_windows_noun %>%
 
 #### Plot the summary of AUC proportions across trials and participants
 
-```{r eval=T, message=F}
+```{r eval=F}
 ggplot(auc_summary_noun, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
   geom_line(size = 1.2) +
   geom_ribbon(aes(ymin = mean_AUC_prop - se_AUC_prop, ymax = mean_AUC_prop + se_AUC_prop, fill = AOI),
@@ -600,6 +636,12 @@ ggplot(auc_summary_noun, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = A
     fill = "AOI"
   ) +
   theme_minimal(base_size = 16)
+```
+
+#### Concatenate the normalized time series for determiners and nouns *before* taking the average across participants and trials
+
+```{r}
+auc_combined_raw <- bind_rows(auc_trial_windows_det, auc_trial_windows_noun)
 ```
 
 ## 3. Plotting
@@ -644,17 +686,15 @@ ggplot(auc_summary_noun, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = A
 
 
 
-# Number of pseudobins (must match earlier value)
-N_PBINS <- 1000
 
-# Shift noun pseudo-bins forward
-auc_summary_noun_shifted <- auc_summary_noun %>%
-  mutate(PBin = PBin + N_PBINS)
-
+# # Shift noun pseudo-bins forward
+# auc_summary_noun_shifted <- auc_summary_noun %>%
+#   mutate(PBin = PBin + N_PBINS)
+# 
 # Combine determiner + noun windows
 auc_combined <- bind_rows(
   auc_summary_det,
-  auc_summary_noun_shifted
+  auc_summary_noun
 )
 
 # Make sure grouping vars are factors
@@ -750,9 +790,126 @@ auc_plot <- ggplot(
 auc_plot
 ```
 
+```{r}
+# Combine determiner + noun windows
+auc_combined <- bind_rows(
+  auc_summary_det,
+  auc_summary_noun
+)
+
+# Make sure grouping vars are factors
+auc_combined <- auc_combined %>%
+  mutate(
+    SpeakerType = as.factor(SpeakerType),
+    Determiner = as.factor(Determiner),
+    Phonol_Overlap_T = as.factor(Phonol_Overlap_T)
+  )
+
+# Compute Target + NonTarget sum
+auc_sum <- auc_combined %>%
+  group_by(PBin, Determiner, SpeakerType, Phonol_Overlap_T) %>%
+  summarise(
+    sum_AUC = sum(mean_AUC_prop),
+    .groups = "drop"
+  )
+
+# Plot
+auc_plot <- ggplot(
+  auc_combined,
+  aes(
+    x = PBin,
+    y = mean_AUC_prop,
+    color = AOI,
+    group = AOI
+  )
+) +
+
+  # 8 panels
+  facet_wrap(
+    ~ Determiner + SpeakerType + Phonol_Overlap_T,
+    ncol = 4,
+    labeller = labeller(
+      Determiner = c(
+        "Definite" = "Definite determiner",
+        "Possessive" = "Possessive determiner"
+      ),
+      SpeakerType = c(
+        "1" = "ASI",
+        "2" = "HSS"
+      ),
+      Phonol_Overlap_T = c(
+        "Minimal Pair" = "Minimal Pair",
+        "NonMinPair" = "Non Minimal Pair"
+      )
+    )
+  ) +
+
+  theme_bw() +
+
+  # Target / NonTarget lines
+  geom_line(linewidth = 1.2) +
+
+  # SE ribbon
+  geom_ribbon(
+    aes(
+      ymin = mean_AUC_prop - se_AUC_prop,
+      ymax = mean_AUC_prop + se_AUC_prop,
+      fill = AOI
+    ),
+    alpha = 0.2,
+    color = NA
+  ) +
+
+  # Sum line (Target + NonTarget)
+  geom_line(
+    data = auc_sum,
+    aes(x = PBin, y = sum_AUC),
+    inherit.aes = FALSE,
+    color = "black",
+    linewidth = 1
+  ) +
+
+  # Vertical line at noun onset
+  geom_vline(
+    xintercept = N_PBINS,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+
+  scale_color_manual(
+    values = c(
+      "Target" = "#ffac00",
+      "NonTarget" = "#002e65"
+    )
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "Target" = "#ffac00",
+      "NonTarget" = "#002e65"
+    )
+  ) +
+
+  labs(
+    title = "Mean AUC over Time: Determiner → Noun",
+    x = "Pseudo-bin (normalized time)",
+    y = "AUC proportion",
+    color = "AOI",
+    fill = "AOI"
+  ) +
+
+  theme(
+    text = element_text(size = 18),
+    panel.spacing = unit(1, "cm"),
+    legend.position = "right"
+  )
+
+auc_plot
+```
+
 #### Plot the step function for an individual participant-trial
 
-```{r}
+```{r eval=F}
 f_example <- step_functions %>%
   filter(Participant == "TA106", AOI == "Target", TOI == "Trial01-def-campesina_0") %>%
   pull(f) %>%
@@ -1011,14 +1168,16 @@ ggsave("plots/fixation_plot_gendermatch.png", width = 40, height = 15, dpi = 300
 
 ## 4. DPA
 
-Here we will run a by-participant analysis testing the divergence between the Target and NonTarget AOIs.
+Here we will run a by-participant analysis testing the divergence between the Target and NonTarget AOIs. The conditions are SpeakerType and Determiner.
 
-##### Select time window and create stratification variables
+### Create stratification variables
+
+Previously we selected a time window; now it will be the normalized and concatenated determine and noun portions. Now the pseudo-bin numbers will act like the previous time bin numbers `TimeMS_adjusted` ; FixP will become AUC_prop.
 
 ```{r eval=T, echo=T, message=F}
-div.dat = fix.twovar %>%  
-  filter(1400>=TimeMS_adjusted & TimeMS_adjusted>=-300) %>% 
-  dplyr::mutate(StrataVars=paste(Participant, AOI, TimeMS_adjusted, sep='')) %>% 
+# TODO can't use auc_combined because it takes the average of FixP over all participants and trials
+div.dat = auc_combined_raw %>%  
+  dplyr::mutate(StrataVars=paste(Participant, AOI, PBin, sep='')) %>% 
   mutate_at(vars(SpeakerType, StrataVars),as.factor) %>% 
   droplevels()
 
@@ -1026,23 +1185,26 @@ summary(div.dat)
 head(div.dat)
 ```
 
-##### Create two subsets based on the type of determiner
+### Rename columns so we don't have to change the original DPA code
+
+```{r}
+div.dat <- div.dat %>%
+  rename(
+    TimeMS_adjusted = PBin,
+    FixP = AUC_prop
+  )
+```
+
+### Create two subsets based on the type of determiner
 
 ```{r eval=T, echo=T, message=F}
 div.dat.def <- div.dat %>% filter(Determiner == "Definite")
 div.dat.pos <- div.dat %>% filter(Determiner == "Possessive")
 ```
 
-##### Define bootstrap functions to compute a divergence point for the target vs. unrelated conditions
+### Define bootstrap functions to compute a divergence point for the target vs. unrelated conditions
 
-Number of consecutive statistically significant time bins required to establish divergence, and number of bootstrap iterations
-
-```{r eval=T, echo=T, message=F}
-Nbins = 20
-Niter = 100L
-```
-
-Bootstrap function using lmer
+#### Bootstrap function using lmer
 
 ```{r eval=T, echo=T, message=F}
 boot_L1L2_lmer = function(original_data, resample_indices){
@@ -1084,7 +1246,7 @@ boot_L1L2_lmer = function(original_data, resample_indices){
 
 ```
 
-Run the lmer bootstrap on the two subsets by determiner type
+#### Run the lmer bootstrap on the two subsets by determiner type
 
 ```{r eval=F, echo=T, message=F}
 bootres_L1L2_lmer_def = boot::boot(
