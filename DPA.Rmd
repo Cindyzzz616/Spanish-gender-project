@@ -130,7 +130,7 @@ head(fix.dat)
 ```{r}
 # Window of interest (in milliseconds)
 WINDOW_START <- -300
-WINDOW_END <- 1400
+WINDOW_END <- 2000
 
 # Number of pseudobins for normalization
 N_PBINS = 100
@@ -395,7 +395,8 @@ fix.dat.full <- fix.dat.full %>%
 
 fix.twovar <- fix.dat.full %>%
   mutate(Trackloss = ifelse(AreaFixated == "Trackloss", TRUE, FALSE)) %>%
-  mutate(NonTarget = ifelse(AreaFixated == "Target", 0, 1)) %>% # right now, we're have NonTarget as 1 when the fixation is on competitor, distractor or when it's trackloss 
+  # mutate(NonTarget = ifelse(AreaFixated == "Target", 0, 1)) %>% # right now, we're have NonTarget as 1 when the fixation is on competitor, distractor or when it's trackloss 
+  mutate(NonTarget = as.integer(AreaFixated %in% c("Competitor", "Distractor"))) %>% # alternative version: exclude trackloss in nontarget (so only competitor and distractor)
   mutate(AreaFixated = ifelse(AreaFixated == "Target", "Target", "NonTarget"))
 
 fix.twovar$NonTarget <- as.factor(fix.twovar$NonTarget)
@@ -686,6 +687,36 @@ ggplot(auc_summary_noun, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = A
 auc_combined_raw <- bind_rows(auc_trial_windows_det, auc_trial_windows_noun)
 ```
 
+### Tacking on the remainder
+
+```{r}
+fix.twovar_post <- fix.twovar %>%
+  group_by(Participant, TOI) %>%
+  
+  # keep only the 0–700 ms window after ending offset
+  filter(
+    TimeMS_adjusted >= EndingOffset_adjusted,
+    TimeMS_adjusted <= EndingOffset_adjusted + 700
+  ) %>%
+  
+  mutate(
+    PBin = ((TimeMS_adjusted - min(TimeMS_adjusted)) / 10) + 1 + N_PBINS*2
+  ) %>%
+  
+  ungroup()
+
+fix.twovar.notrackloss <- fix.twovar_post %>%
+  dplyr::filter(!Trackloss)
+
+fix.means.twovar = Rmisc::summarySE(fix.twovar.notrackloss, measurevar='FixP', groupvars=c('PBin','SpeakerType', 'AOI', 'Determiner', 'Phonol_Overlap_T'), na.rm=T)
+
+fix.means.twovar <- fix.means.twovar %>%
+  rename(mean_AUC_prop = FixP)
+
+summary(fix.means.twovar)
+head(fix.means.twovar)
+```
+
 ## 3. Plotting
 
 ### Concatenate the plots for normalized determiner portions and noun portions
@@ -733,10 +764,19 @@ auc_combined_raw <- bind_rows(auc_trial_windows_det, auc_trial_windows_noun)
 # auc_summary_noun_shifted <- auc_summary_noun %>%
 #   mutate(PBin = PBin + N_PBINS)
 # 
+
+
+
+
+
+
+
+
 # Combine determiner + noun windows
 auc_combined <- bind_rows(
   auc_summary_det,
-  auc_summary_noun
+  auc_summary_noun,
+  fix.means.twovar
 )
 
 # Make sure grouping vars are factors
@@ -799,6 +839,21 @@ auc_plot <- ggplot(
     xintercept = N_PBINS,
     linetype = "dashed",
     linewidth = 0.8
+  ) +
+  
+  # Vertical line at noun offset
+  geom_vline(
+    xintercept = N_PBINS * 2,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+  
+  # Horizontal reference lines
+  geom_hline(
+    yintercept = c(0.33, 0.67),
+    color = "gray75",
+    linewidth = 0.7,
+    linetype = "solid"
   ) +
 
   scale_color_manual(
