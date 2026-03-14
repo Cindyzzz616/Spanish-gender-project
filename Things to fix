@@ -1,6 +1,0 @@
-Notes: things to fix
-- find out which participants did which trials, and only fill in rows that are actually missing
-- figure out a more elegant way of handling trackloss (right now, for a given AOI, we can't distinguish between looks to another AOI vs trackloss (vs looks to blank space))
-- normalize determiners and nouns separately
-- stitch windows together: normalized portion from Det onset to N offset + absolute time afterwards
-- separate out all the definite determiner trials

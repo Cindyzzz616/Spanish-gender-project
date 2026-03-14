@@ -177,12 +177,15 @@ observed_combos <- fix.dat %>%
 full_template <- observed_combos %>%
   tidyr::expand(
     tidyr::nesting(Participant, TOI),
-    TimeMS_adjusted = all_times
+    TimeMS_adjusted = all_times,
+    Trackloss = TRUE
   )
 
 # Step 4: left-join raw data onto the template
 fix.dat.full <- full_template %>%
-  left_join(fix.dat, by = c("Participant", "TOI", "TimeMS_adjusted"))
+  left_join(fix.dat, by = c("Participant", "TOI", "TimeMS_adjusted")) %>%
+  select(-Trackloss.y) %>%
+  rename(Trackloss = Trackloss.x)
 ```
 
 ### Build a trial info table
@@ -201,6 +204,9 @@ trial_info <- fix.dat %>%
     Phonol_Overlap_T = unique(Phonol_Overlap_T),
     .groups = "drop"
   )
+
+# To save as a tab-delimited file (.txt)
+write.table(trial_info, file = "trial_info.txt", sep = "\t", row.names = TRUE)
 ```
 
 ### Build a participant info table
@@ -388,6 +394,7 @@ fix.dat.full <- fix.dat.full %>%
 #   select(-Competitor, -Distractor)
 
 fix.twovar <- fix.dat.full %>%
+  mutate(Trackloss = ifelse(AreaFixated == "Trackloss", TRUE, FALSE)) %>%
   mutate(NonTarget = ifelse(AreaFixated == "Target", 0, 1)) %>% # right now, we're have NonTarget as 1 when the fixation is on competitor, distractor or when it's trackloss 
   mutate(AreaFixated = ifelse(AreaFixated == "Target", "Target", "NonTarget"))
 
@@ -461,6 +468,42 @@ ggplot(plot_df, aes(TimeMS_adjusted, FixP, colour = AOI)) +
   )
 ```
 
+#### Calculate the proportion of trackloss for each trial
+
+```{r}
+library(dplyr)
+
+trackloss_summary <- fix.dat.full %>%
+  
+  # mark trackloss rows
+  mutate(trackloss = AreaFixated == "Trackloss") %>%
+  
+  # classify time window
+  mutate(window = case_when(
+    TimeMS_adjusted >= 0 & TimeMS_adjusted < NounOnset_adjusted ~ "determiner_portion",
+    TimeMS_adjusted >= NounOnset_adjusted & TimeMS_adjusted <= EndingOffset_adjusted ~ "noun_portion",
+    TRUE ~ NA_character_
+  )) %>%
+  
+  # keep only relevant time bins
+  filter(!is.na(window)) %>%
+  
+  # compute proportion
+  group_by(Participant, TOI, window) %>%
+  summarise(
+    prop_trackloss = mean(trackloss),
+    n_samples = n(),
+    .groups = "drop"
+  )
+
+avg_trackloss <- trackloss_summary %>%
+  group_by(window) %>%
+  summarise(
+    avg_prop_trackloss = mean(prop_trackloss),
+    .groups = "drop"
+  )
+```
+
 ### Normalization for determiner portion
 
 #### Define windows for each trial
@@ -484,7 +527,6 @@ trial_windows_det <- fix.twovar %>%
     })
   ) %>%
   unnest(window_list)
-
 ```
 
 #### Compute AUCs for all step functions
