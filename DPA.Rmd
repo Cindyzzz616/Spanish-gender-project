@@ -566,10 +566,11 @@ auc_trial_windows_det <- auc_trial_windows_det %>%
 auc_summary_det <- auc_trial_windows_det %>%
   group_by(AOI, PBin, SpeakerType, Determiner, Phonol_Overlap_T) %>%
   summarise(
+    n = n(),
     mean_AUC = mean(AUC, na.rm = TRUE),
-    se_AUC = sd(AUC, na.rm = TRUE) / sqrt(n()),
+    se_AUC = sd(AUC, na.rm = TRUE) / sqrt(n),
     mean_AUC_prop = mean(AUC_prop, na.rm = TRUE),
-    se_AUC_prop = sd(AUC_prop, na.rm = TRUE) / sqrt(n()),
+    se_AUC_prop = sd(AUC_prop, na.rm = TRUE) / sqrt(n),
     .groups = "drop"
   )
 ```
@@ -654,6 +655,7 @@ auc_trial_windows_noun <- auc_trial_windows_noun %>%
 auc_summary_noun <- auc_trial_windows_noun %>%
   group_by(AOI, PBin, SpeakerType, Determiner, Phonol_Overlap_T) %>%
   summarise(
+    n = n(),
     mean_AUC = mean(AUC, na.rm = TRUE),
     se_AUC = sd(AUC, na.rm = TRUE) / sqrt(n()),
     mean_AUC_prop = mean(AUC_prop, na.rm = TRUE),
@@ -669,8 +671,8 @@ ggplot(auc_summary_noun, aes(x = PBin, y = mean_AUC_prop, color = AOI, group = A
   geom_line(size = 1.2) +
   geom_ribbon(aes(ymin = mean_AUC_prop - se_AUC_prop, ymax = mean_AUC_prop + se_AUC_prop, fill = AOI),
               alpha = 0.2, color = NA) +
-  scale_color_manual(values = c("Target" = "#ffac00", "NonTarget" = "#002e65")) +
-  scale_fill_manual(values = c("Target" = "#ffac00", "NonTarget" = "#002e65")) +
+  scale_color_manual(values = c("Target" = "gold", "NonTarget" = "gray")) +
+  scale_fill_manual(values = c("Target" = "gold", "NonTarget" = "gray")) +
   labs(
     title = "Mean AUC over Time for Nouns",
     x = "Pseudo-bin",
@@ -848,6 +850,26 @@ auc_plot <- ggplot(
     linewidth = 0.8
   ) +
   
+  annotate(
+    "text",
+    x = N_PBINS,
+    y = 0.72,
+    label = "Noun onset",
+    angle = 90,
+    vjust = -0.5,
+    size = 5
+  ) +
+  
+  annotate(
+    "text",
+    x = N_PBINS * 2,
+    y = 0.72,
+    label = "Noun offset",
+    angle = 90,
+    vjust = -0.5,
+    size = 5
+  ) +
+  
   # Horizontal reference lines
   geom_hline(
     yintercept = c(0.33, 0.67),
@@ -858,22 +880,22 @@ auc_plot <- ggplot(
 
   scale_color_manual(
     values = c(
-      "Target" = "#ffac00",
-      "NonTarget" = "#002e65"
+      "Target" = "gold",
+      "NonTarget" = "gray"
     )
   ) +
 
   scale_fill_manual(
     values = c(
-      "Target" = "#ffac00",
-      "NonTarget" = "#002e65"
+      "Target" = "gold",
+      "NonTarget" = "gray"
     )
   ) +
 
   labs(
-    title = "Mean AUC over Time: Determiner → Noun",
+    title = "Mean Fixation Proportion over Time: Determiner → Noun → Remainder",
     x = "Pseudo-bin (normalized time)",
-    y = "AUC proportion",
+    y = "Fixation proportion",
     color = "AOI",
     fill = "AOI"
   ) +
