@@ -724,56 +724,6 @@ head(fix.means.twovar)
 ### Concatenate the plots for normalized determiner portions and noun portions
 
 ```{r}
-# # Step 1: Shift the noun pseudo-bins
-# auc_summary_noun_shifted <- auc_summary_noun %>%
-#   mutate(PBin = PBin + N_PBINS)
-# 
-# # Step 2: Combine determiner + noun data
-# auc_combined <- bind_rows(
-#   auc_summary_det,
-#   auc_summary_noun_shifted
-# )
-# 
-# # Step 3: Plot (almost exactly your original code)
-# ggplot(auc_combined,
-#        aes(x = PBin, y = mean_AUC_prop, color = AOI, group = AOI)) +
-#   geom_line(linewidth = 1.2) +
-#   geom_ribbon(
-#     aes(ymin = mean_AUC_prop - se_AUC_prop,
-#         ymax = mean_AUC_prop + se_AUC_prop,
-#         fill = AOI),
-#     alpha = 0.2,
-#     color = NA
-#   ) +
-#   scale_color_manual(values = c("Target" = "#ffac00",
-#                                 "NonTarget" = "#002e65")) +
-#   scale_fill_manual(values = c("Target" = "#ffac00",
-#                                "NonTarget" = "#002e65")) +
-#   labs(
-#     title = "Mean AUC over Time: Determiner → Noun",
-#     x = "Pseudo-bin (normalized time)",
-#     y = "AUC proportion",
-#     color = "AOI",
-#     fill = "AOI"
-#   ) +
-#   theme_minimal(base_size = 16)
-
-
-
-
-
-# # Shift noun pseudo-bins forward
-# auc_summary_noun_shifted <- auc_summary_noun %>%
-#   mutate(PBin = PBin + N_PBINS)
-# 
-
-
-
-
-
-
-
-
 # Combine determiner + noun windows
 auc_combined <- bind_rows(
   auc_summary_det,
@@ -1042,7 +992,7 @@ plot(t_seq, f_example(t_seq),
      xlab = "Time (ms, adjusted)", ylab = "Fixation Probability")
 ```
 
-### Concatenated plot by Determiner Type
+### Concatenated plot by Determiner Type (from here until the end of section 3, it is generating the older plots before normalization)
 
 ##### Merge the non minimal pair values
 
@@ -1323,7 +1273,7 @@ div.dat.pos <- div.dat %>% filter(Determiner == "Possessive")
 
 ### Define bootstrap functions to compute a divergence point for the target vs. unrelated conditions
 
-#### Bootstrap function using lmer
+#### Bootstrap function using lmer (this should be where the error occurred)
 
 ```{r eval=T, echo=T, message=F}
 boot_L1L2_lmer = function(original_data, resample_indices){
