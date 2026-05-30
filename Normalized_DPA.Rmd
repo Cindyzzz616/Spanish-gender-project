@@ -1,0 +1,249 @@
+---
+title: "Normalized_DPA"
+output: html_document
+date: "2026-05-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Data preparation
+
+```{r eval=T, echo=T, message=F}
+rm(list = ls()) # Clear the workspace
+options(scipen = 999) # Turn off scientific notation
+```
+
+## Packages
+
+```{r eval=T, message=F}
+require(Rmisc)
+require(tidyverse)
+require(ggplot2)
+require(boot)
+require(dplyr)
+require(lme4)
+require(purrr)
+require(languageserver)
+```
+
+## Package versions
+
+```{r}
+installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
+```
+
+## 1.1. Define constants
+
+```{r}
+# Window of interest (in milliseconds)
+WINDOW_START <- -300
+WINDOW_END <- 2000
+
+# Number of pseudobins for normalization
+N_PBINS = 100
+
+# Number of consecutive statistically significant time bins required to establish divergence
+Nbins = 20
+
+# Number of bootstrap iterations
+Niter = 100L
+```
+
+## 1.2. Read the time-course output data of the eye-tracker from file
+
+```{r}
+fix.dat = read_delim("data-2025-03-12/df_cleaned.csv", delim=',')
+fix.dat = fix.dat %>% mutate_at(vars(Timeline), as.factor)
+# all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
+
+summary(fix.dat)
+head(fix.dat)
+```
+
+## 1.3. Fill in the missing time points and add a trackloss column
+
+```{r}
+# Make a list of relevant trial variables
+trial_vars <- c(
+  "SpeakerType",
+  "Determiner",
+  "Phonol_Overlap_T",
+  "NounOnset_adjusted",
+  "EndingOffset_adjusted"
+)
+
+# Create rows for the missing time points
+fix.dat.full <- fix.dat %>%
+  group_by(Participant, TOI) %>%
+  complete(
+    TimeMS_adjusted = seq(
+      min(TimeMS_adjusted),
+      max(TimeMS_adjusted),
+      by = 10
+    )
+  ) %>%
+  
+  # Fill in the values for the trial variables
+  fill(all_of(trial_vars), .direction = "downup") %>%
+  
+  # Add binary fixation proportions of 0 to each AOI
+  mutate(
+    across(
+      c(Target, Competitor, Distractor),
+      ~ coalesce(.x, 0)
+    )
+  ) %>%
+  ungroup()
+```
+
+## 1.4. Factorize relevant variables and drop extra columns
+
+```{r}
+fix.dat.full <- fix.dat.full %>%
+  
+  # Change independent variables to factors
+  mutate(
+    TOI = factor(TOI),
+    Participant = factor(Participant),
+    Determiner = factor(Determiner),
+    SpeakerType = factor(SpeakerType),
+    Phonol_Overlap_T = factor(Phonol_Overlap_T)
+  ) %>%
+  
+  # Drop the extra columns
+  select(
+    Participant,
+    TOI,
+    TimeMS_adjusted,
+    SpeakerType,
+    Determiner,
+    Phonol_Overlap_T,
+    Target,
+    Competitor,
+    Distractor,
+    NounOnset_adjusted,
+    EndingOffset_adjusted
+  ) %>%
+  
+  # Collapse the two types of non-minimal pairs in the phonological overlap variable
+  mutate(
+    Phonol_Overlap_T = forcats::fct_collapse(
+      Phonol_Overlap_T,
+      "Non Minimal Pair" = c(
+        "First Syll-stressed",
+        "First Syll-unstressed"
+      )
+    )
+  ) %>%
+  
+  # Add an AreaFixated column
+  mutate(
+    AreaFixated = case_when(
+      Target == 1 ~ "Target",
+      Competitor == 1 ~ "Competitor",
+      Distractor == 1 ~ "Distractor",
+      TRUE ~ "Trackloss"
+    )
+  )
+
+summary(fix.dat.full)
+```
+
+### Sanity check plot (step function plot for one participant and TOI)
+
+```{r eval=F}
+trial_id <- "Trial02-def-perro_0"
+participant_id <- "TA105"
+
+df_plot <- fix.dat.full %>%
+  filter(Participant == participant_id, TOI == trial_id) %>%
+  select(TimeMS_adjusted, Target, Competitor, Distractor) %>%
+  pivot_longer(cols = c(Target, Competitor, Distractor),
+               names_to = "AOI", values_to = "Fixation")
+
+library(ggplot2)
+
+vline_df <- tibble::tibble(
+  time = c(108, 551),
+  event = c("Noun onset", "Ending offset")
+)
+
+ggplot(df_plot, aes(x = TimeMS_adjusted, y = Fixation, color = AOI)) +
+  geom_step(size = 0.8) +
+  geom_vline(
+    data = vline_df,
+    aes(xintercept=time, linetype=event),
+    color="black",
+    linewidth=0.8
+  ) +
+  scale_x_continuous(limits = c(WINDOW_START, WINDOW_END)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(title = "Binary Fixations by AOI",
+       subtitle = "Participant TA105 – Trial02-def-perro_0",
+       x = "Time (ms)",
+       y = "Fixated (0/1)") +
+  theme_minimal()
+```
+
+### Average noun onset and ending offset
+
+```{r eval=F}
+fix.dat.full %>%
+  summarise(avg_onset = mean(unique(NounOnset_adjusted), na.rm = TRUE))
+fix.dat.full %>%
+  summarise(avg_offset = mean(unique(EndingOffset_adjusted), na.rm = TRUE))
+```
+
+### Calculate the proportion of trackloss for each trial
+
+(why are some trackloss proportions 1???)
+
+```{r}
+library(dplyr)
+
+trackloss_summary <- fix.dat.full %>%
+  
+  # mark trackloss rows
+  mutate(trackloss = AreaFixated == "Trackloss") %>%
+  
+  # classify time window
+  mutate(window = case_when(
+    TimeMS_adjusted >= 0 & TimeMS_adjusted < NounOnset_adjusted ~ "determiner_portion",
+    TimeMS_adjusted >= NounOnset_adjusted & TimeMS_adjusted <= EndingOffset_adjusted ~ "noun_portion",
+    TRUE ~ NA_character_
+  )) %>%
+  
+  # keep only relevant time bins
+  filter(!is.na(window)) %>%
+  
+  # compute proportion
+  group_by(Participant, TOI, window) %>%
+  summarise(
+    prop_trackloss = mean(trackloss),
+    n_samples = n(),
+    .groups = "drop"
+  )
+
+avg_trackloss <- trackloss_summary %>%
+  group_by(window) %>%
+  summarise(
+    avg_prop_trackloss = mean(prop_trackloss),
+    .groups = "drop"
+  )
+
+summary(trackloss_summary)
+head(avg_trackloss)
+```
+
+## 1.5. Reshape binomially encoded fixation data to a long format for plotting and analysis
+
+```{r}
+fix.long <- fix.dat.full %>%
+  pivot_longer(
+    cols = c(Target, Competitor, Distractor),
+    names_to = "AOI",
+    values_to = "FixP"
+  )
+```

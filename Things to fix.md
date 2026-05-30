@@ -4,6 +4,42 @@ editor_options:
     wrap: 72
 ---
 
+Meeting notes - May 19, 2026
+
+- look for UPDATED in the code
+
+- weird that crossover doesn't happen in the noun duration...
+--- DPA assumes that the crossover occurs in a certain interval
+
+- strategy 1: run 1 DPA across noun (normalized) + remainder (non-normalized)
+  - pro: visually, we see the divergence happening in the remainder, so include remainder in order to not break assumption that interval contains divergence point
+  - con: can we mix normalized and non-normalized data?
+         how do we interpret the point as a relative percentage?
+  -> or just run the DPA on the normalized noun portion only?
+  -> go back to the t-tests from IPC (IPC_DPA.html, in Ito & Knoeferle)
+  --- watch the empirical logit part - might have to convert fixation portion to empirical logit fixation
+      ^ it might work now that our data is normalized
+         
+- strategy 2: run 1 DPA across noun (normalized) + remainder (normalized)
+  ex.
+  trial 1: noun = 50 ms, remainder = 300 ms
+  trial 2: noun = 200 ms, remainder = 200 ms
+  - if you normalize across the entire interval, then 20% into the two trials would mean different things
+  
+what if we define the non-targets differently?
+- have the non-target be only the competitor or the distractor
+so we have:
+- target vs. non-target
+- target vs. distractor
+- target vs. competitor
+do we include trackloss? - exclude it in all three cases
+- also plot these before running the DPA
+
+where did they define the lmer model?
+e.g. something like lmer(y ~ x1 + x2, data = df)
+^ it's already a very simple model - they did a t-test
+
+
 Notes: things to fix
 
 -   [ ] find out which participants did which trials, and only fill in
