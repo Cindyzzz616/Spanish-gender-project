@@ -4,7 +4,12 @@ editor_options:
     wrap: 72
 ---
 
-Meeting notes - May 19, 2026
+======= Notes for Crystal - June 2026 =======
+- 329 out of 3044 rows in trackloss_summary are 1.000 - which means that there is no data at all in that det/noun portion and the trial should be excluded
+
+Idea - trackloss threshold - exclude a trial from plotting if trackloss in the det/noun portion is greater than a certain threshold
+
+======= Meeting notes - May 19, 2026 =======
 
 - look for UPDATED in the code
 

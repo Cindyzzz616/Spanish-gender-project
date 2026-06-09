@@ -76,11 +76,14 @@ trial_vars <- c(
 
 # Create rows for the missing time points
 fix.dat.full <- fix.dat %>%
+  
+  filter(between(TimeMS_adjusted, WINDOW_START, WINDOW_END)) %>%
+  
   group_by(Participant, TOI) %>%
   complete(
     TimeMS_adjusted = seq(
-      min(TimeMS_adjusted),
-      max(TimeMS_adjusted),
+      WINDOW_START,
+      WINDOW_END,
       by = 10
     )
   ) %>%
@@ -237,13 +240,111 @@ summary(trackloss_summary)
 head(avg_trackloss)
 ```
 
-## 1.5. Reshape binomially encoded fixation data to a long format for plotting and analysis
+::: {style="color:red;"}
+329 out of 3044 rows in trackloss_summary are 1.000 - which means that there is no data at all in that det/noun portion and the trial should be excluded
+
+`sum(trackloss_summary$prop_trackloss > 0.99, na.rm = TRUE)`
+
+\>\>\> 329
+:::
+
+# 2. Plotting before normalization
+
+## 2.1. Preparing the data for visualization
 
 ```{r}
+# Add an AreaFixated column with AOIs as levels
+fix.dat.full <- fix.dat.full %>%
+  mutate(
+    AreaFixated = case_when(
+      Target == 1 ~ "Target",
+      Competitor == 1 ~ "Competitor",
+      Distractor == 1 ~ "Distractor",
+      TRUE ~ "Trackloss"
+    )
+  )
+
+# Pivot the binomially encoded columns
 fix.long <- fix.dat.full %>%
   pivot_longer(
     cols = c(Target, Competitor, Distractor),
     names_to = "AOI",
     values_to = "FixP"
   )
+
+fix.long = fix.long %>% mutate_at(vars(AOI), as.factor)
+```
+
+## 2.2. Plots of mean fixation proportion
+
+### Plot with all three AOIs, INCLUDING trackloss, over ALL conditions (no facets)
+
+```{r, fig.width = 12}
+# Calculate the mean fixation proportion for each AOI, in each time bin
+fix.means = Rmisc::summarySE(fix.long, 
+                             measurevar='FixP', 
+                             groupvars=c('TimeMS_adjusted','AOI'),
+                             na.rm=T)
+
+# Make the plot
+fix.plot.all = ggplot() + 
+  geom_line(data=fix.means,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_fill_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.all
+```
+
+### Plot with all three AOIs, EXCLUDING trackloss, over ALL conditions (no facets)
+
+```{r, fig.width = 12}
+
+# Drop rows with trackloss
+fix.dat.full.noloss = fix.dat.full %>% filter(AreaFixated %in% c('Target','Competitor', 'Distractor')) %>% droplevels()
+
+# Pivot the binomially encoded columns
+fix.long <- fix.dat.full.noloss %>%
+  pivot_longer(
+    cols = c(Target, Competitor, Distractor),
+    names_to = "AOI",
+    values_to = "FixP"
+  )
+
+fix.long = fix.long %>% mutate_at(vars(AOI), as.factor)
+
+# Calculate the mean fixation proportion for each AOI, in each time bin
+fix.means = Rmisc::summarySE(fix.long, 
+                             measurevar='FixP', 
+                             groupvars=c('TimeMS_adjusted','AOI'),
+                             na.rm=T)
+
+# Make the plot
+fix.plot.all = ggplot() + 
+  geom_line(data=fix.means,aes(x=TimeMS_adjusted, y=FixP, group=AOI, colour=AOI, lty=AOI), lwd=1.5) +
+  geom_ribbon(data=fix.means,aes(x=TimeMS_adjusted,ymin=FixP-se,ymax=FixP+se,color=AOI,fill=AOI), linewidth=.2, alpha=.3, lty="dashed", show.legend=F)  +
+  labs(y="Fixation Proportion", x="Time relative to the target word onset (ms)") + 
+  
+  scale_x_continuous(limits=c(-300, 1400),expand=c(0,0),breaks=seq(-300, 1400, 200)) +
+  scale_color_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_fill_manual('AOI', values=c("pink","skyblue","gold")) +
+  scale_linetype_manual('AOI', values=c("solid","dotted", "dotdash")) +
+  
+  theme(
+    text=element_text(size=20),
+    legend.key.height=unit(.3,"in"),
+    legend.key.width=unit(.6,"in"),
+    panel.spacing=unit(1, "in")) 
+
+fix.plot.all
 ```

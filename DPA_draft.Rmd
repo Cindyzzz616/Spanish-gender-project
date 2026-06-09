@@ -28,18 +28,20 @@ installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
 ##### Read the time-course data
 
 ```{r eval=T, message=F}
-fix.dat = read_delim("/Users/cindyzhang/Desktop/Spanish Gender Project/Spanish Gender Project/data-2025-03-12/df_cleaned.csv", delim=',')
+fix.dat = read_delim("data-2025-03-12/df_cleaned.csv", delim=',')
+
 # all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
 ```
 
 ##### Remove rows where the time bins are not 10ms
+
 ```{r eval=T, message=F}
 fix.dat <- fix.dat %>% filter(Bin_duration == 10) # FIXME is this necessary?
 ```
 
 ##### Add AreaFixated column
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 fix.dat <- fix.dat %>%
   mutate(AreaFixated = case_when(
     Competitor == 1 ~ "Competitor",
@@ -49,21 +51,16 @@ fix.dat <- fix.dat %>%
 ```
 
 ##### Reduplicate the dataset and add `Condition` column
-- feels really wrong to duplicate the data three times
 
-# ``` {r eval=T, message=F}
-# fix.dat <- bind_rows(
-#   fix.dat %>% mutate(Condition = "Target"),
-#   fix.dat %>% mutate(Condition = "Competitor"),
-#   fix.dat %>% mutate(Condition = "Distractor")
-# )
-# ```
+-   feels really wrong to duplicate the data three times
 
+# `{r eval=T, message=F} # fix.dat <- bind_rows( #   fix.dat %>% mutate(Condition = "Target"), #   fix.dat %>% mutate(Condition = "Competitor"), #   fix.dat %>% mutate(Condition = "Distractor") # ) #`
 
 ##### Add FixP column to be consistent with the Ito data
-- don't think we need that anymore since we did it with fix.long instead
 
-``` {r eval=F, message=F}
+-   don't think we need that anymore since we did it with fix.long instead
+
+```{r eval=F, message=F}
 fix.dat <- fix.dat %>%
   mutate(FixP = case_when(
     (Condition == "Target") & (Target == 1) ~ 1.00,
@@ -81,19 +78,19 @@ head(fix.dat)
 ```
 
 ##### Select `Target` and `NonTarget` AreaFixated to do divergence between Target and the two other AreaFixated (Competitor and Distractor) - this is like Target and Unrelated in Ito
-- they used to select for conditions, now we select for AreaFixated (?)
-- no need to drop the `Trackloss` AreaFixated because they don't exist
-# ```{r eval=T, echo=T, message=F}
-# fix.dat = fix.dat %>% filter(AreaFixated %in% c('Target','NonTarget')) %>% droplevels()
-# ```
+
+-   they used to select for conditions, now we select for AreaFixated (?)
+-   no need to drop the `Trackloss` AreaFixated because they don't exist \# `{r eval=T, echo=T, message=F} # fix.dat = fix.dat %>% filter(AreaFixated %in% c('Target','NonTarget')) %>% droplevels() #`
 
 ##### Version that selects all 3 AreaFixated - shouldn't need it because we only create the 2-var version later
+
 ```{r eval=F, echo=T, message=F}
 fix.dat = fix.dat %>% filter(AreaFixated %in% c('Target','Competitor', 'Distractor')) %>% droplevels()
 ```
 
 ##### Change `Participant`, `TOI`, `AreaFixated` and `SpeakerType` to factor (and `Condition`)
-- FIXME they also had `Condition` as a factor - should be AreaFixated here - our `Condition` is a different concept - removed for now
+
+-   FIXME they also had `Condition` as a factor - should be AreaFixated here - our `Condition` is a different concept - removed for now
 
 ```{r eval=T, echo=T, message=F}
 fix.dat = fix.dat %>% mutate_at(vars(Participant, TOI, AreaFixated, SpeakerType), as.factor)
@@ -106,12 +103,14 @@ summary(fix.dat)
 ```
 
 ##### Compute the mean, SD, SE and CI for `FixP` for each time bin, AOI and SpeakerType
-- I think `FixP` is equivalent to the binomial encoding columns we have - for example the AreaFixated is Target, and there's a 1 under the column Target - then the FixP is just 1 (bc we don't have decimals)
-- ohhh wait there's a difference between the AreaFixated we're concerned about, and the AreaFixated the participant is actually looking at - the latter would be our "AOI"
 
-- for each timebin (across all participants and trials), we want an average FixP for each AreaFixated
+-   I think `FixP` is equivalent to the binomial encoding columns we have - for example the AreaFixated is Target, and there's a 1 under the column Target - then the FixP is just 1 (bc we don't have decimals)
 
-``` {r eval=T, echo=T, message=F}
+-   ohhh wait there's a difference between the AreaFixated we're concerned about, and the AreaFixated the participant is actually looking at - the latter would be our "AOI"
+
+-   for each timebin (across all participants and trials), we want an average FixP for each AreaFixated
+
+```{r eval=T, echo=T, message=F}
 # reshape to long format
 fix.long <- fix.dat %>%
   pivot_longer(
@@ -234,8 +233,10 @@ fix.plot = ggplot() +
 
 fix.plot
 ```
+
 ##### Plotting by trials
-``` {r}
+
+```{r}
 fix.means.sub <- fix.means %>%
   filter(TOI %in% c("Trial18-def-toro_0", "Trial12-pos-raya_0", "Trial10-pos-oso_0"))
 ```
@@ -271,17 +272,18 @@ fix.plot.TOI
 
 ##### Save the plot
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 ggsave("plots/fixation_plot.png", width = 20, height = 15, dpi = 300)
 ```
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 ggsave("plots/fixation_plot_by_TOI.png", width = 20, height = 15, dpi = 300)
 ```
 
 ##### Compute the empirical logit (cf. Barr, 2008, JML)
-- do we need to do this? Crystal said no in the last meeting
-- Also we don't have the columns Count, allSample, etc.
+
+-   do we need to do this? Crystal said no in the last meeting
+-   Also we don't have the columns Count, allSample, etc.
 
 The formula to compute the empirical logit is: `log( (Y+.5) / (N-Y+.5) )` where `Y` is the total number of samples that fall in the critical interest area, and `N` is the total number of samples for the current bin.
 
@@ -293,7 +295,6 @@ fix.dat = fix.dat %>% mutate(elogFix = log((Count+.5)/(allSample-BlinkCount-OffS
 head(fix.dat)
 ```
 
-
 ### DPA
 
 Here we will run a by-subject analysis testing the divergence between the target and unrelated conditions.
@@ -302,15 +303,13 @@ Here we will run a by-subject analysis testing the divergence between the target
 
 We will select the time window for the analysis. The time window should be large enough to capture a divergence point, but it should not include time bins with very few observations. It may be impossible to perform a statistical analysis (e.g., t-test) on such data. We will choose the time from -800 ms relative to the target word onset.
 
-Reminder: Data resampling will be performed within this variable. In this case, data will be resampled within subject, condition and time. This variable should be treated as a factor.
-^^^ original description
+Reminder: Data resampling will be performed within this variable. In this case, data will be resampled within subject, condition and time. This variable should be treated as a factor. \^\^\^ original description
 
-- not sure if it should be AreaFixated or AOI here
-
+-   not sure if it should be AreaFixated or AOI here
 
 ##### Combine Competitor and Distractor
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 fix.twovar <- fix.dat %>%
   mutate(NonTarget = Competitor + Distractor) %>%
   select(-Competitor, -Distractor)
@@ -323,7 +322,7 @@ fix.twovar$AreaFixated <- as.factor(fix.twovar$AreaFixated)
 
 ##### Pivot binomially encoded columns
 
-``` {r eval=T, message=F}
+```{r eval=T, message=F}
 fix.twovar <- fix.twovar %>%
   pivot_longer(
     cols = c(Target, NonTarget),
@@ -406,12 +405,15 @@ fix.plot.twovar
 ```
 
 ##### Save the plot
-``` {r eval=T, message=F}
+
+```{r eval=T, message=F}
 ggsave("plots/fixation_plot_twovar.png", width = 20, height = 15, dpi = 300)
 ```
 
 #### Select time window and create stratification variables
-- double check: AreaFixated or AOI?
+
+-   double check: AreaFixated or AOI?
+
 ```{r eval=T, echo=T, message=F}
 div.dat = fix.twovar %>%  
   filter(1400>=TimeMS_adjusted & TimeMS_adjusted>=-300) %>% 
@@ -424,7 +426,8 @@ head(div.dat)
 ```
 
 ##### Chatgpt trying to fix it by summarizing the divergence dataset first
-``` {R}
+
+```{R}
 div.summary <- div.dat %>%
   group_by(Participant, TimeMS_adjusted, AOI, SpeakerType) %>%
   summarise(FixM = mean(FixP, na.rm = TRUE), .groups = "drop") %>%
@@ -434,6 +437,7 @@ div.summary <- div.dat %>%
 ##### Define a bootstrap function to compute a divergence point for the target vs. unrelated conditions
 
 ##### This worked!!!
+
 ```{r eval=T, echo=T, message=F}
 boot_L1L2 = function(original_data, resample_indices){
   # FIXME dat_resample = original_data[resample_indices, ] # resample the data
@@ -526,7 +530,8 @@ boot_L1L2 = function(original_data, resample_indices){
 ```
 
 ##### attempted chatgpt fix
-``` {r eval=T, echo=T, message=F}
+
+```{r eval=T, echo=T, message=F}
 boot_L1L2 = function(original_data, resample_indices) {
   dat_resample = original_data[resample_indices, ]
   progress$tick()
@@ -593,7 +598,8 @@ boot_L1L2 = function(original_data, resample_indices) {
 ```
 
 ##### Another chatgpt attempt
-``` {R}
+
+```{R}
 div.summary <- fix.twovar %>%
   group_by(Participant, TimeMS_adjusted, AOI, SpeakerType) %>%
   summarise(FixM = mean(FixP, na.rm = TRUE), .groups = "drop") %>%
@@ -694,7 +700,8 @@ boot_L1L2_glm = function(original_data, resample_indices){
 ```
 
 Number of consecutive statistically significant time bins required to establish divergence
-``` {r}
+
+```{r}
 Nbins = 20
 ```
 
@@ -704,7 +711,6 @@ Number of iterations
 # FIXME don't forget to adjust Niter
 Niter = 100L
 ```
-
 
 ##### Run the bootstrap
 
@@ -721,7 +727,6 @@ bootres_L1L2 = boot::boot(
   R = Niter)  # number of iterations          
 ```
 
-
 ##### Run the glm bootstrap
 
 ```{r eval=T, echo=T, message=F}
@@ -736,7 +741,6 @@ bootres_L1L2_glm = boot::boot(
   strata = div.dat$StrataVars, # stratification variable 
   R = Niter)  # number of iterations          
 ```
-
 
 We are saving the results using the `save` function below. If we already have the results file, we can load it using the `load` function.
 
@@ -760,7 +764,6 @@ Output
 ```{r eval=T, echo=T, message=F}
 bootres_L1L2 
 ```
-
 
 ##### Convert the onset time to milliseconds
 
