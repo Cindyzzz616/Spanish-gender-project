@@ -197,6 +197,9 @@ fix.dat.full %>%
   summarise(avg_onset = mean(unique(NounOnset_adjusted), na.rm = TRUE))
 fix.dat.full %>%
   summarise(avg_offset = mean(unique(EndingOffset_adjusted), na.rm = TRUE))
+
+# Average noun onset: 127.6885 ms
+# Average noun offset: 618.0482 ms
 ```
 
 ### Calculate the proportion of trackloss for each trial
@@ -253,17 +256,6 @@ head(avg_trackloss)
 ## 2.1. Preparing the data for visualization
 
 ```{r}
-# Add an AreaFixated column with AOIs as levels
-fix.dat.full <- fix.dat.full %>%
-  mutate(
-    AreaFixated = case_when(
-      Target == 1 ~ "Target",
-      Competitor == 1 ~ "Competitor",
-      Distractor == 1 ~ "Distractor",
-      TRUE ~ "Trackloss"
-    )
-  )
-
 # Pivot the binomially encoded columns
 fix.long <- fix.dat.full %>%
   pivot_longer(
@@ -314,17 +306,17 @@ fix.plot.all
 fix.dat.full.noloss = fix.dat.full %>% filter(AreaFixated %in% c('Target','Competitor', 'Distractor')) %>% droplevels()
 
 # Pivot the binomially encoded columns
-fix.long <- fix.dat.full.noloss %>%
+fix.long.noloss <- fix.dat.full.noloss %>%
   pivot_longer(
     cols = c(Target, Competitor, Distractor),
     names_to = "AOI",
     values_to = "FixP"
   )
 
-fix.long = fix.long %>% mutate_at(vars(AOI), as.factor)
+fix.long.noloss = fix.long.noloss %>% mutate_at(vars(AOI), as.factor)
 
 # Calculate the mean fixation proportion for each AOI, in each time bin
-fix.means = Rmisc::summarySE(fix.long, 
+fix.means = Rmisc::summarySE(fix.long.noloss, 
                              measurevar='FixP', 
                              groupvars=c('TimeMS_adjusted','AOI'),
                              na.rm=T)
@@ -347,4 +339,1016 @@ fix.plot.all = ggplot() +
     panel.spacing=unit(1, "in")) 
 
 fix.plot.all
+```
+
+# 3. Normalization
+
+## 3.1 Create one step function per Participant × AOI × TOI
+
+```{r}
+# Make sure FixP is not a factor
+fix.long <- fix.long %>%
+  mutate(FixP = as.numeric(as.character(FixP)))
+
+step_functions <- fix.long %>%
+  group_by(Participant, AOI, TOI) %>%
+  summarise(
+    f = list(approxfun(
+      x = TimeMS_adjusted,
+      y = FixP,
+      method = "constant",
+      rule = 2
+    )),
+    .groups = "drop"
+  )
+```
+
+### Plot the step functions for one participant-trial
+
+```{r eval=F}
+step_functions_example = step_functions %>% filter(Participant == "TA105", TOI == "Trial02-def-perro_0") 
+
+time_grid <- seq(WINDOW_START, WINDOW_END, by = 10)
+
+library(purrr)
+
+plot_df <- step_functions_example %>%
+  mutate(
+    data = map(f, ~ tibble(
+      TimeMS_adjusted = time_grid,
+      FixP = .x(time_grid)
+    ))
+  ) %>%
+  unnest(data)
+
+library(ggplot2)
+
+ggplot(plot_df, aes(TimeMS_adjusted, FixP, colour = AOI)) +
+  geom_step(linewidth = 1) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme_bw() +
+  labs(
+    x = "Time (ms)",
+    y = "FixP",
+    title = "Step function: TA105 Trial02-def-perro_0"
+  )
+```
+
+## 3.2 Normalization for determiner portion
+
+### 3.2.1 Define windows for each trial
+
+```{r eval=T, message=F}
+# Compute trial-specific windows
+trial_windows_det <- fix.long %>%
+  group_by(TOI) %>%
+  summarise(
+    SpeakerType = first(SpeakerType),
+    Determiner  = first(Determiner),
+    Phonol_Overlap_T = first(Phonol_Overlap_T),
+    start_anchor = 0,
+    end_anchor   = max(NounOnset_adjusted, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    window_list = map2(start_anchor, end_anchor, function(start, end) {
+      edges <- seq(start, end, length.out = N_PBINS + 1)
+      tibble(start = head(edges, -1), end = tail(edges, -1))
+    })
+  ) %>%
+  unnest(window_list)
+```
+
+### 3.2.2 Compute AUCs for all step functions
+
+```{r}
+auc_trial_windows_det <- step_functions %>%
+  left_join(trial_windows_det, by = "TOI", relationship = "many-to-many") %>%
+  mutate(
+    AUC = pmap_dbl(
+      list(f, start, end),
+      function(fun, start, end) {
+        tryCatch(
+          integrate(fun, lower = start, upper = end)$value,
+          error = function(e) NA_real_
+        )
+      }
+    ),
+    WindowDur = end - start,
+    AUC_prop = AUC / WindowDur
+  )
+```
+
+### 3.2.3 Add pseudo-bin numbers
+
+```{r eval=T, message=F}
+auc_trial_windows_det <- auc_trial_windows_det %>%
+  group_by(Participant, TOI, SpeakerType, Determiner, Phonol_Overlap_T) %>%
+  arrange(start, AOI, .by_group = TRUE) %>%
+  mutate(PBin = rep(1:N_PBINS, each = length(unique(AOI)), length.out = n())) %>%
+  ungroup()
+```
+
+### 3.2.4 Compute average AUCs across conditions (for smooth plotting)
+
+```{r eval=T, message=F}
+auc_summary_det <- auc_trial_windows_det %>%
+  group_by(AOI, PBin, SpeakerType, Determiner, Phonol_Overlap_T) %>%
+  summarise(
+    n = n(),
+    mean_AUC = mean(AUC, na.rm = TRUE),
+    se_AUC = sd(AUC, na.rm = TRUE) / sqrt(n),
+    mean_AUC_prop = mean(AUC_prop, na.rm = TRUE),
+    se_AUC_prop = sd(AUC_prop, na.rm = TRUE) / sqrt(n),
+    .groups = "drop"
+  )
+```
+
+### 3.2.5 Plot the summary of AUC proportions across trials and participants
+
+```{r eval=F}
+ggplot(
+  auc_summary_det,
+  aes(
+    x = PBin,
+    y = mean_AUC_prop,
+    colour = AOI,
+    group = AOI
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_ribbon(
+    aes(
+      ymin = mean_AUC_prop - se_AUC_prop,
+      ymax = mean_AUC_prop + se_AUC_prop,
+      fill = AOI
+    ),
+    alpha = 0.2,
+    colour = NA
+  ) +
+  facet_grid(
+    SpeakerType ~ Determiner + Phonol_Overlap_T
+  ) +
+  scale_color_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 100, by = 20)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  ) +
+  labs(
+    title = "Mean fixation proportions across normalized determiner pseudobins",
+    x = "Normalized determiner pseudobin",
+    y = "Mean fixation proportion",
+    colour = "AOI",
+    fill = "AOI"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+```
+
+## 3.3 Normalization for noun portion
+
+### 3.3.1 Define windows for each trial
+
+```{r eval=T, message=F}
+# Compute trial-specific windows
+trial_windows_noun <- fix.long %>%
+  group_by(TOI) %>%
+  summarise(
+    SpeakerType = first(SpeakerType),
+    Determiner = first(Determiner),
+    Phonol_Overlap_T = first(Phonol_Overlap_T),
+    start_anchor = min(NounOnset_adjusted, na.rm = TRUE),
+    end_anchor = max(EndingOffset_adjusted, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    window_list = map2(start_anchor, end_anchor, function(start, end) {
+      edges <- seq(start, end, length.out = N_PBINS + 1)
+      tibble(
+        start = head(edges, -1),
+        end = tail(edges, -1)
+      )
+    })
+  ) %>%
+  unnest(window_list)
+```
+
+### 3.3.2 Compute AUCs for all step functions
+
+```{r}
+auc_trial_windows_noun <- step_functions %>%
+  left_join(
+    trial_windows_noun,
+    by = "TOI",
+    relationship = "many-to-many"
+  ) %>%
+  mutate(
+    AUC = pmap_dbl(
+      list(f, start, end),
+      function(fun, start, end) {
+        tryCatch(
+          integrate(fun, lower = start, upper = end)$value,
+          error = function(e) NA_real_
+        )
+      }
+    ),
+    WindowDur = end - start,
+    AUC_prop = AUC / WindowDur
+  )
+```
+
+### 3.3.3 Add pseudo-bin numbers
+
+```{r eval=T, message=F}
+auc_trial_windows_noun <- auc_trial_windows_noun %>%
+  group_by(
+    Participant,
+    TOI,
+    SpeakerType,
+    Determiner,
+    Phonol_Overlap_T
+  ) %>%
+  arrange(start, AOI, .by_group = TRUE) %>%
+  mutate(
+    PBin = rep(
+      1:N_PBINS,
+      each = length(unique(AOI)),
+      length.out = n()
+    ) + N_PBINS
+  ) %>%
+  ungroup()
+```
+
+### 3.3.4 Compute average AUCs across conditions (for smooth plotting)
+
+```{r eval=T, message=F}
+auc_summary_noun <- auc_trial_windows_noun %>%
+  group_by(
+    AOI,
+    PBin,
+    SpeakerType,
+    Determiner,
+    Phonol_Overlap_T
+  ) %>%
+  summarise(
+    n = n(),
+    mean_AUC = mean(AUC, na.rm = TRUE),
+    se_AUC = sd(AUC, na.rm = TRUE) / sqrt(n),
+    mean_AUC_prop = mean(AUC_prop, na.rm = TRUE),
+    se_AUC_prop = sd(AUC_prop, na.rm = TRUE) / sqrt(n),
+    .groups = "drop"
+  )
+```
+
+### 3.3.5 Plot the summary of AUC proportions across trials and participants
+
+```{r eval=F}
+ggplot(
+  auc_summary_noun,
+  aes(
+    x = PBin,
+    y = mean_AUC_prop,
+    colour = AOI,
+    group = AOI
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_ribbon(
+    aes(
+      ymin = mean_AUC_prop - se_AUC_prop,
+      ymax = mean_AUC_prop + se_AUC_prop,
+      fill = AOI
+    ),
+    alpha = 0.2,
+    colour = NA
+  ) +
+  facet_grid(
+    SpeakerType ~ Determiner + Phonol_Overlap_T
+  ) +
+  scale_color_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+  scale_x_continuous(
+    breaks = seq(100, 200, by = 20)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  ) +
+  labs(
+    title = "Mean fixation proportions across normalized noun pseudobins",
+    x = "Normalized noun pseudobin",
+    y = "Mean fixation proportion",
+    colour = "AOI",
+    fill = "AOI"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+```
+
+## 3.4 Plotting after normalization
+
+### 3.4.1 Calculate mean fixation for the remainder, 700ms after each trial's ending offset
+
+```{r}
+fix.long.post <- fix.long %>%
+  group_by(Participant, TOI) %>%
+  
+  # keep only the 0–700 ms window after ending offset
+  filter(
+    TimeMS_adjusted >= EndingOffset_adjusted,
+    TimeMS_adjusted <= EndingOffset_adjusted + 700
+  ) %>%
+  
+  mutate(
+    PBin = ((TimeMS_adjusted - min(TimeMS_adjusted)) / 10) + 1 + N_PBINS*2
+  ) %>%
+  
+  ungroup()
+
+# fix.long.notrackloss <- fix.long.post %>%
+#   dplyr::filter(!Trackloss)
+
+fix.means.long = Rmisc::summarySE(fix.long.post, measurevar='FixP', groupvars=c('PBin','SpeakerType', 'AOI', 'Determiner', 'Phonol_Overlap_T'), na.rm=T)
+
+fix.means.long <- fix.means.long %>%
+  rename(mean_AUC_prop = FixP)
+
+summary(fix.means.long)
+head(fix.means.long)
+```
+
+### 3.4.2 Concatenated plots with normalized determiner portions and noun portions, and non-normalized remainders
+
+```{r}
+# Combine determiner + noun windows
+auc_combined <- bind_rows(
+  auc_summary_det,
+  auc_summary_noun,
+  fix.means.long
+)
+
+# Make sure grouping vars are factors
+auc_combined <- auc_combined %>%
+  mutate(
+    SpeakerType = as.factor(SpeakerType),
+    Determiner = as.factor(Determiner),
+    Phonol_Overlap_T = as.factor(Phonol_Overlap_T)
+  )
+
+# Plot
+auc_plot <- ggplot(
+  auc_combined,
+  aes(
+    x = PBin,
+    y = mean_AUC_prop,
+    color = AOI,
+    group = AOI
+  )
+) +
+
+  # 8 panels now
+  facet_wrap(
+    ~ Determiner + SpeakerType + Phonol_Overlap_T,
+    ncol = 4,
+    labeller = labeller(
+      Determiner = c(
+        "Definite" = "Definite determiner",
+        "Possessive" = "Possessive determiner"
+      ),
+      SpeakerType = c(
+        "1" = "ASI",
+        "2" = "HSS"
+      ),
+      Phonol_Overlap_T = c(
+        "Minimal Pair" = "Minimal Pair",
+        "NonMinPair" = "Non Minimal Pair"
+      )
+    )
+  ) +
+
+  theme_bw() +
+
+  # Line
+  geom_line(linewidth = 1.2) +
+
+  # SE ribbon
+  geom_ribbon(
+    aes(
+      ymin = mean_AUC_prop - se_AUC_prop,
+      ymax = mean_AUC_prop + se_AUC_prop,
+      fill = AOI
+    ),
+    alpha = 0.2,
+    color = NA
+  ) +
+
+  # Vertical line at noun onset
+  geom_vline(
+    xintercept = N_PBINS,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+  
+  # Vertical line at noun offset
+  geom_vline(
+    xintercept = N_PBINS * 2,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+  
+  annotate(
+    "text",
+    x = N_PBINS,
+    y = 0.72,
+    label = "Noun onset",
+    angle = 90,
+    vjust = -0.5,
+    size = 5
+  ) +
+  
+  annotate(
+    "text",
+    x = N_PBINS * 2,
+    y = 0.72,
+    label = "Noun offset",
+    angle = 90,
+    vjust = -0.5,
+    size = 5
+  ) +
+  
+  # Horizontal reference lines
+  geom_hline(
+    yintercept = c(0.33, 0.67),
+    color = "gray75",
+    linewidth = 0.7,
+    linetype = "solid"
+  ) +
+
+  scale_color_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+
+  labs(
+    title = "Mean Fixation Proportion over Time: Determiner → Noun → Remainder",
+    x = "Pseudo-bin (normalized time)",
+    y = "Fixation proportion",
+    color = "AOI",
+    fill = "AOI"
+  ) +
+
+  theme(
+    text = element_text(size = 18),
+    panel.spacing = unit(1, "cm"),
+    legend.position = "right"
+  )
+
+auc_plot
+```
+
+# 4. DPA
+
+Here we will run a by-participant analysis testing the divergence between the Target and NonTarget AOIs. The conditions are SpeakerType and Determiner.
+
+## 4.1 Preparations
+
+### 4.1.1 Concatenate the normalized time series for determiners and nouns *before* taking the average across participants and trials
+
+We cannot use `auc_combined` because it takes the average of FixP over all participants and trials
+
+```{r}
+auc_combined_raw <- bind_rows(auc_trial_windows_det, auc_trial_windows_noun, fix.long.post)
+
+auc_combined_raw <- auc_combined_raw %>% select(-f, -TimeMS_adjusted, -FixP) 
+```
+
+# Empirical logit
+
+```{r}
+auc_combined_raw = auc_combined_raw %>% mutate(logFix = log(AUC_prop/(1-AUC_prop)))
+
+Nbins = 5
+```
+
+## 4.1.2 Reduce the dataset to two variables
+
+```{r}
+nontarget <- auc_combined_raw %>%
+  filter(AOI %in% c("Competitor")) %>%
+  group_by(
+    Participant,
+    TOI,
+    PBin,
+    SpeakerType,
+    Determiner,
+    Phonol_Overlap_T
+  ) %>%
+  summarise(
+    AUC_prop = sum(AUC_prop, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(AOI = "NonTarget")
+
+target <- auc_combined_raw %>%
+  filter(AOI == "Target")
+
+auc_combined_raw_twovar <- bind_rows(
+  target,
+  nontarget
+)
+```
+
+## 4.1.3 Create stratification variables
+
+Previously we selected a time window; now it will be the normalized and concatenated determiner and noun portions, as well as the non-normalized remainder. Now the pseudo-bin numbers will act like the previous time bin numbers `TimeMS_adjusted` ; FixP will become AUC_prop.
+
+```{r eval=T, echo=T, message=F}
+div.dat = auc_combined_raw_twovar %>%  
+  filter(PBin<200) %>%
+  dplyr::mutate(StrataVars=paste(Participant, AOI, PBin, sep='')) %>% 
+  mutate_at(vars(SpeakerType, StrataVars),as.factor) %>% 
+  droplevels()
+
+summary(div.dat)
+head(div.dat)
+```
+
+## 4.1.4 Rename columns so we don't have to change the original DPA code
+
+```{r}
+div.dat <- div.dat %>%
+  rename(
+    TimeMS_adjusted = PBin,
+    FixP = AUC_prop
+  )
+```
+
+### 4.1.5 Create two subsets based on the type of determiner
+
+```{r eval=T, echo=T, message=F}
+div.dat.def <- div.dat %>% filter(Determiner == "Definite")
+div.dat.pos <- div.dat %>% filter(Determiner == "Possessive")
+```
+
+## 4.2 Define bootstrap functions to compute a divergence point for the target vs. unrelated conditions
+
+### 4.2.1 Bootstrap function using lmer (this should be where the error occurred)
+
+```{r eval=T, echo=T, message=F}
+boot_L1L2_lmer = function(original_data, resample_indices){
+  dat = original_data[resample_indices, ]
+  
+  # a statistical test at each timepoint for each group
+#  test_g1 = dat %>% # t-test for L1 group
+#    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+#    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+  
+  test_g1 <- tryCatch(
+
+    dat %>%
+        subset(SpeakerType==1) %>%
+        group_by(TimeMS_adjusted) %>%
+        group_modify(~{
+
+          fit <- lmer(
+              FixP~AOI+
+              (1|Participant),
+              data=.x
+          )
+      
+          tibble(
+      
+              t=
+                  summary(fit)$coefficients[
+                      "AOITarget",
+                      "t value"
+                  ]
+      
+          )
+      
+      }),
+
+    error=function(e){
+
+        cat("\nMODEL FAILED\n")
+
+        print(
+            dat %>%
+            subset(SpeakerType==1) %>%
+            filter(TimeMS_adjusted==201) %>%
+            count(AOI)
+        )
+
+        print(
+            dat %>%
+            subset(SpeakerType==1) %>%
+            filter(TimeMS_adjusted==201) %>%
+            count(Participant)
+        )
+
+        stop(e)
+
+    }
+
+)
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+
+  # return a TRUE/FALSE vector of significant positive t-scores
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of sequential TRUEs; threshold is Nbins
+  for (i in 1:(length(t_g2)-Nbins)) {
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
+  # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
+  c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
+    which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
+    which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
+}
+
+```
+
+### 4.2.2 Run the lmer bootstrap on the two subsets by determiner type
+
+```{r eval=F, echo=T, message=F}
+bootres_L1L2_lmer_def = boot::boot(
+  data = div.dat.def,  # data set to bootstrap       
+  statistic = boot_L1L2_lmer,  # bootstrap function      
+  strata = div.dat.def$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_lmer_pos = boot::boot(
+  data = div.dat.pos,  # data set to bootstrap       
+  statistic = boot_L1L2_lmer,  # bootstrap function      
+  strata = div.dat.pos$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_lmer_def
+bootres_L1L2_lmer_pos
+```
+
+Save the lmer results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_lmer_def, file="NEW.DPA_results.lmer.def.rds")
+save(bootres_L1L2_lmer_pos, file="NEW.DPA_results.lmer.pos.rds")
+```
+
+::: {style="color: red;"}
+##### Running the lmer bootstrap by trial
+
+This ended up yielding mostly NAs due to the small sample size.
+:::
+
+Define a function that runs the bootstrap function for all the trials
+
+```{r eval=F, echo=T, message=F}
+run_boot_per_trial <- function(toi_id, df, Niter = 100, strata_col = "StrataVars") {
+  trial_data <- df %>% filter(TOI == toi_id) %>% droplevels()
+
+  boot_result <- boot::boot(
+    data = trial_data,
+    statistic = boot_L1L2_glm,  # your divergence function
+    strata = trial_data[[strata_col]],
+    R = Niter
+  )
+
+  # Extract metadata from the first row (assuming Determiner etc. are constant per trial)
+  trial_info <- trial_data %>%
+    slice(1) %>%
+    select(TOI, Determiner, Phonol_Overlap, GenderMatch)  # add more if needed
+
+  list(boot = boot_result, info = trial_info)
+}
+```
+
+Run the function that runs the bootstrap function
+
+```{r eval=F, echo=T, message=F}
+trial_ids <- unique(div.dat$TOI)
+
+# Store both the bootstrap and metadata
+boot_trials <- lapply(trial_ids, function(toi) run_boot_per_trial(toi, div.dat, Niter = 100))
+names(boot_trials) <- trial_ids
+```
+
+Extract divergence values + metadata into a summary dataframe
+
+```{r eval=F, echo=T, message=F}
+# Function to extract means and metadata
+extract_div_summary <- function(result) {
+  bootres <- result$boot
+  info <- result$info
+
+  tibble::tibble(
+    TOI = info$TOI,
+    Determiner = info$Determiner,
+    Phonol_Overlap = info$Phonol_Overlap,
+    GenderMatch = info$GenderMatchTarget_D,
+    ASI_divergence = mean(bootres$t[,2], na.rm = TRUE) * 10 - 10,
+    HSS_divergence = mean(bootres$t[,3], na.rm = TRUE) * 10 - 10
+  )
+}
+
+# Build summary
+div_summary_df <- purrr::map_dfr(boot_trials, extract_div_summary)
+```
+
+Bootstrap function using glm (generalized linear model)
+
+```{r eval=F, echo=T, message=F}
+boot_L1L2_glm = function(original_data, resample_indices){
+  dat = original_data[resample_indices, ]
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(glm(FixP ~ AOI, family = binomial))$coefficients["AOITarget", "z value"])
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(glm(FixP ~ AOI, family = binomial))$coefficients["AOITarget", "z value"])
+
+  # return a TRUE/FALSE vector of significant positive t-scores
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of sequential TRUEs; threshold is Nbins
+  for (i in 1:(length(t_g2)-Nbins)) {
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
+  # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
+  c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
+    which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
+    which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
+}
+
+```
+
+Run the glm bootstrap on the two subsets by determiner type
+
+```{r eval=F, echo=T, message=F}
+bootres_L1L2_glm_def = boot::boot(
+  data = div.dat.def,  # data set to bootstrap       
+  statistic = boot_L1L2_glm,  # bootstrap function      
+  strata = div.dat.def$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_glm_pos = boot::boot(
+  data = div.dat.pos,  # data set to bootstrap       
+  statistic = boot_L1L2_glm,  # bootstrap function      
+  strata = div.dat.pos$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations
+
+bootres_L1L2_glm_def
+bootres_L1L2_glm_pos
+```
+
+Save the glm results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_glm_def, file="DPA_results.glm.def.rds")
+save(bootres_L1L2_glm_pos, file="DPA_results.glm.pos.rds")
+```
+
+##### Extracting and plotting the divergence points
+
+Load the lmer results
+
+```{r eval=T, echo=T, message=F}
+load("DPA_results.lmer.def.rds")
+load("DPA_results.lmer.pos.rds")
+```
+
+Load the glm results
+
+```{r eval=F, echo=T, message=F}
+load("DPA_results.glm.def.rds")
+load("DPA_results.glm.pos.rds")
+```
+
+Define function to extract divergence points and confidence intervals from bootstrapping results
+
+```{r eval=T, echo=T, message=F}
+get_divergence_ms <- function(bootres, index) {
+  # index = 2 for ASI, 3 for HSS
+  mean_bin <- mean(bootres$t[, index], na.rm = TRUE)
+  ci_bin <- boot::boot.ci(bootres, index = index, type = "perc")$percent[4:5]
+  
+  mean_ms <- (mean_bin - 1) * 10
+  ci_ms <- (ci_bin - 1) * 10
+  
+  list(mean = mean_ms, ci = ci_ms)
+}
+```
+
+Run the function on all the results
+
+```{r eval=T, echo=T, message=F}
+# Definite determiner
+def_asi <- get_divergence_ms(bootres_L1L2_lmer_def, index = 2)
+def_hss <- get_divergence_ms(bootres_L1L2_lmer_def, index = 3)
+
+# Possessive determiner
+pos_asi <- get_divergence_ms(bootres_L1L2_lmer_pos, index = 2)
+pos_hss <- get_divergence_ms(bootres_L1L2_lmer_pos, index = 3)
+```
+
+Create dataframe for plotting
+
+```{r eval=T, echo=T, message=F}
+div_df <- tibble::tibble(
+  Determiner = c("Definite", "Definite", "Possessive", "Possessive"),
+  SpeakerType = c("1", "2", "1", "2"),
+  TimeMS = c(def_asi$mean, def_hss$mean, pos_asi$mean, pos_hss$mean),
+  CI_low = c(def_asi$ci[1], def_hss$ci[1], pos_asi$ci[1], pos_hss$ci[1]),
+  CI_high = c(def_asi$ci[2], def_hss$ci[2], pos_asi$ci[2], pos_hss$ci[2])
+)
+
+div_df = div_df %>% mutate_at(vars(SpeakerType, Determiner), as.factor)
+
+div_df <- div_df %>%
+  mutate(label = paste0(TimeMS, " ms"))
+```
+
+Add divergence points and their confidence intervals to the two-variable plots
+
+```{r eval=T, echo=T, message=F, fig.width = 14}
+fix.plot.twovar +
+  geom_point(data = div_df,
+             aes(x = TimeMS, y = 0.48),
+             shape = 18, size = 4, color = "black") +
+  geom_errorbarh(data = div_df,
+                 aes(xmin = CI_low, xmax = CI_high, y = 0.48),
+                 height = 0.02, color = "black", linewidth = 0.6) +
+  geom_text(data = div_df,
+          aes(x = TimeMS - 50, y = 0.55, label = label), 
+          size = 10, fontface="bold")
+```
+
+Save the plots
+
+```{r eval=T, message=F}
+ggsave("plots/fixation_plot_twovar_divpts.png", width = 20, height = 15, dpi = 300)
+```
+
+## 5. Group comparison
+
+We can compute a p-value for the group comparison by creating a bootstrap distribution of the null hypothesis. To do this, we will first pool the original data from both groups, randomly assign group labels, and then estimate a difference in divergence point. We will repeat this many times to obtain a distribution of divergence point that could be expected under the null hypothesis. We will obtain the p-value by calculating the proportion of samples from this null distribution that are larger than the observed difference in divergence point in the empirical data.
+
+Below, we will calculate a p-value for the group comparison (ASI vs. HSS group). We will first define a bootstrap function.
+
+##### Define the bootstrap function for group comparison (only lmer so far)
+
+```{r eval=T, echo=T, message=F}
+boot_L1L2_pval = function(original_data, resample_indices){
+  dat_resample = original_data[resample_indices, ] # resample the data
+  
+  dat = dat_resample %>% 
+    group_by(Participant, AOI, TimeMS_adjusted) %>% 
+    transform(SpeakerType=sample(SpeakerType,replace=F)) %>% # randomly assign group labels 
+    ungroup() #%>% 
+  
+  # a statistical test at each timepoint for each group
+  test_g1 = dat %>% # t-test for L1 group
+    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+
+  test_g2 = dat %>% # t-test for L2 group
+    subset(SpeakerType == 2) %>% group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
+  
+  # return a TRUE/FALSE vector of significant positive t-scores  
+  # (positive means more looks to the target than unrelated)
+  t_g1 = test_g1$t > 1.96
+  t_g2 = test_g2$t > 1.96
+  
+  # create empty vectors to store onsets
+  onset_g1 = onset_g2 = c()
+  
+  # find the index of the earliest run of 4 sequential TRUEs 
+  for (i in 1:(length(t_g2)-Nbins)) { 
+    onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
+    onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
+  }
+  
+  # find the difference between onsets
+  delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
+  
+  # print 
+  delta_g1g2  # onset difference L1 vs. L2 t[,1]
+}
+
+```
+
+##### Run the lmer bootstrap on the two subsets by determiner type
+
+```{r eval=F, echo=T, message=F}
+bootres_L1L2_pval_def = boot::boot(
+  data = div.dat.def,  # data set to bootstrap       
+  statistic = boot_L1L2_pval,  # bootstrap function      
+  strata = div.dat.def$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations        
+
+bootres_L1L2_pval_pos = boot::boot(
+  data = div.dat.pos,  # data set to bootstrap       
+  statistic = boot_L1L2_pval,  # bootstrap function      
+  strata = div.dat.pos$StrataVars, # stratification variable 
+  R = Niter)  # number of iterations   
+
+bootres_L1L2_pval_def
+bootres_L1L2_pval_pos
+```
+
+##### Save the group comparison results
+
+```{r eval=F, echo=T, message=F}
+save(bootres_L1L2_pval, file="DPA_results.pval.def.rds")
+save(bootres_L1L2_pval, file="DPA_results.pval.pos.rds")
+```
+
+##### If we already have saved results, we can load them.
+
+```{r eval=F, echo=T, message=F}
+load("DPA_results.pval.def.rds")
+load("DPA_results.pval.pos.rds")
+```
+
+##### Compute the p-values
+
+```{r eval=F, echo=T, message=F}
+pval.def <- round(mean(bootres_L1L2_pval_def$t[,1]>=bootres_L1L2_lmer_def$t0[1], na.rm=T), 5)        
+pval.pos <- round(mean(bootres_L1L2_pval_pos$t[,1]>=bootres_L1L2_lmer_pos$t0[1], na.rm=T), 5) 
+
+pval.def
+pval.pos
 ```

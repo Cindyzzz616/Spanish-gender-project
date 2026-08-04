@@ -4,6 +4,26 @@ editor_options:
     wrap: 72
 ---
 
+======= July meeting =======
+- need to do window analysis first to get yes/no answer
+- what did previous analyses do that favoured a positive divergence?
+- do it on just alternating (minimal pair)
+- do just target vs competitor or target vs distractor
+- try to first group by speaker type, then do dpa on determiner type
+- try empirical logit transformation on the fixation proportions before running DPA
+  - empirical logit doesn't make sense because we only have fixation proportions after normalization
+  - we don't know N and Y
+  - we can take ordinary logit - 
+    - logit(p) = log(p/(1-p))
+    - p = fixation proportion
+    - 1-p = non-fixation proportion
+    - but we don't know what the non-fixation proportion is because we don't know how many trials were trackloss
+- examples at: https://osf.io/tzn8u/overview 
+
+======= New notes - July 2026 =======
+- why is the trackloss proportion 1 for the det/noun portions of some trials? should we just exclude those trials?
+- there are already NAs in AUC - must have occurred when integrating the step functions
+
 ======= Notes for Crystal - June 2026 =======
 - 329 out of 3044 rows in trackloss_summary are 1.000 - which means that there is no data at all in that det/noun portion and the trial should be excluded
 
