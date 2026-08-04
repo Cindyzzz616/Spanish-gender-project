@@ -849,6 +849,155 @@ auc_plot <- ggplot(
 auc_plot
 ```
 
+```{r}
+# Combine determiner + noun windows
+auc_combined <- bind_rows(
+  auc_summary_det,
+  auc_summary_noun,
+  fix.means.long
+)
+
+# Aggregate across Minimal Pair vs Non-Minimal Pair
+auc_combined_4facet <- auc_combined %>%
+  group_by(
+    AOI,
+    PBin,
+    SpeakerType,
+    Determiner
+  ) %>%
+  summarise(
+    mean_AUC_prop = mean(mean_AUC_prop, na.rm = TRUE),
+    
+    # Approximate combined SE
+    se_AUC_prop = sqrt(
+      sum(se_AUC_prop^2, na.rm = TRUE)
+    ) / sum(!is.na(se_AUC_prop)),
+    
+    .groups = "drop"
+  ) %>%
+  mutate(
+    SpeakerType = as.factor(SpeakerType),
+    Determiner = as.factor(Determiner)
+  )
+
+
+# Plot
+auc_plot <- ggplot(
+  auc_combined_4facet,
+  aes(
+    x = PBin,
+    y = mean_AUC_prop,
+    color = AOI,
+    group = AOI
+  )
+) +
+
+  # 4 panels: Determiner × Speaker Type
+  facet_wrap(
+    ~ Determiner + SpeakerType,
+    ncol = 2,
+    labeller = labeller(
+      Determiner = c(
+        "Definite" = "Definite determiner",
+        "Possessive" = "Possessive determiner"
+      ),
+      SpeakerType = c(
+        "1" = "ASI",
+        "2" = "HSS"
+      )
+    )
+  ) +
+
+  theme_bw() +
+
+  # Line
+  geom_line(linewidth = 1.2) +
+
+  # SE ribbon
+  geom_ribbon(
+    aes(
+      ymin = mean_AUC_prop - se_AUC_prop,
+      ymax = mean_AUC_prop + se_AUC_prop,
+      fill = AOI
+    ),
+    alpha = 0.2,
+    color = NA
+  ) +
+
+  # Noun onset
+  geom_vline(
+    xintercept = N_PBINS,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+
+  # Noun offset
+  geom_vline(
+    xintercept = N_PBINS * 2,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+
+  annotate(
+    "text",
+    x = N_PBINS,
+    y = 0.72,
+    label = "Noun onset",
+    angle = 90,
+    vjust = -0.5,
+    size = 5
+  ) +
+
+  annotate(
+    "text",
+    x = N_PBINS * 2,
+    y = 0.72,
+    label = "Noun offset",
+    angle = 90,
+    vjust = -0.5,
+    size = 5
+  ) +
+
+  # Horizontal reference lines
+  geom_hline(
+    yintercept = c(0.33, 0.67),
+    color = "gray75",
+    linewidth = 0.7
+  ) +
+
+  scale_color_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "Target" = "gold",
+      "Competitor" = "pink",
+      "Distractor" = "skyblue"
+    )
+  ) +
+
+  labs(
+    title = "Mean Fixation Proportion over Time",
+    x = "Pseudo-bin (normalized time)",
+    y = "Fixation proportion",
+    color = "AOI",
+    fill = "AOI"
+  ) +
+
+  theme(
+    text = element_text(size = 18),
+    panel.spacing = unit(1, "cm"),
+    legend.position = "right"
+  )
+
+auc_plot
+```
+
 # 4. DPA
 
 Here we will run a by-participant analysis testing the divergence between the Target and NonTarget AOIs. The conditions are SpeakerType and Determiner.
