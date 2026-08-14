@@ -4,6 +4,17 @@ editor_options:
     wrap: 72
 ---
 
+======= new DPAs ======
+1. ASI, alt AND nonalt - target fixations for def vs target fixations for pos
+2. HSS, alt ONLY - target fixations for def vs target fixations for pos
+
+-> getting a lot of "boundary (singular) fit: see help('isSingular')"
+
+3. ASI, alt AND nonalt - def only, target vs competitor
+4. HSS, alt ONLY - def only, target vs competitor
+5. ASI, alt AND nonalt - pos only, target vs distractor
+6. HSS, alt ONLY - pos only, target vs distractor
+
 ======= July meeting =======
 - need to do window analysis first to get yes/no answer
 - what did previous analyses do that favoured a positive divergence?
