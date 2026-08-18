@@ -1023,7 +1023,7 @@ Nbins = 5
 ```
 
 ::: {style="color: red;"}
-### Aug 14 edit - new DPA groups
+### Aug 14 edit - new DPA groups - #1-2
 
 #### Filter for alternating nouns only in the HSS group
 
@@ -1071,6 +1071,44 @@ div.dat.hss <- div.dat.hss %>%
     TimeMS_adjusted = PBin,
     FixP = AUC_prop
   )
+```
+:::
+
+::: {style="color:yellow;"}
+### Aug 18 edit - DPA #3-6
+
+#### Create stratification variables
+
+```{r}
+div.dat = auc_combined_raw %>%  
+  filter(PBin<200 & AOI != "Distractor") %>%
+  dplyr::mutate(
+    AOI = relevel(as.factor(AOI), ref = "Competitor"),
+    StrataVars=paste(Participant, AOI, PBin, sep='')) %>% 
+  mutate_at(vars(SpeakerType, StrataVars),as.factor) %>% 
+  droplevels()
+```
+
+#### Rename columns
+
+```{r}
+div.dat <- div.dat %>%
+  rename(
+    TimeMS_adjusted = PBin,
+    FixP = AUC_prop
+  )
+```
+
+#### Split into four groups
+
+```{r}
+div.dat.asi.def <- div.dat %>% filter(SpeakerType == "1" & Determiner == "Definite")
+
+div.dat.hss.def <- div.dat %>% filter(SpeakerType == "2" & Phonol_Overlap_T == "Minimal Pair" & Determiner == "Definite")
+
+div.dat.asi.pos <- div.dat %>% filter(SpeakerType == "1" & Determiner == "Possessive")
+
+div.dat.hss.pos <- div.dat %>% filter(SpeakerType == "2" & Phonol_Overlap_T == "Minimal Pair" & Determiner == "Possessive")
 ```
 :::
 
@@ -1162,122 +1200,7 @@ boot_determiner_lmer <- function(original_data, resample_indices) {
       )
     }) %>%
     ungroup()
-
-  # Crystal said "when Definite and Possessive DIFFER"
-  # so use a two-sided threshold
-  significant <- abs(test$t) > 1.96
-
-  # Find earliest run of Nbins consecutive significant bins
-  onset <- rep(FALSE, length(significant))
-
-  if (length(significant) >= Nbins) {
-
-    for (i in 1:(length(significant) - Nbins + 1)) {
-
-      onset[i] <- all(
-        significant[i:(i + Nbins - 1)],
-        na.rm = FALSE
-      )
-
-    }
-  }
-
-  onset_index <- which(onset)[1]
-
-  if (length(onset_index) == 0) {
-    return(NA_real_)
-  }
-
-  # Return the ACTUAL time rather than merely the index
-  test$TimeMS_adjusted[onset_index]
 }
-
-# boot_L1L2_lmer = function(original_data, resample_indices){
-#   dat = original_data[resample_indices, ]
-#   
-#   # a statistical test at each timepoint for each group
-# #  test_g1 = dat %>% # t-test for L1 group
-# #    subset(SpeakerType == 1) %>% group_by(TimeMS_adjusted) %>%
-# #    dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
-#   
-#   test_g1 <- tryCatch(
-# 
-#     dat %>%
-#         subset(Determiner=="Definite") %>%
-#         group_by(TimeMS_adjusted) %>%
-#         group_modify(~{
-# 
-#           fit <- lmer(
-#               FixP~AOI+
-#               (1|Participant),
-#               data=.x
-#           )
-#       
-#           tibble(
-#       
-#               t=
-#                   summary(fit)$coefficients[
-#                       "AOITarget",
-#                       "t value"
-#                   ]
-#       
-#           )
-#       
-#       }),
-# 
-#     error=function(e){
-# 
-#         cat("\nMODEL FAILED\n")
-# 
-#         print(
-#             dat %>%
-#             subset(SpeakerType==1) %>%
-#             filter(TimeMS_adjusted==201) %>%
-#             count(AOI)
-#         )
-# 
-#         print(
-#             dat %>%
-#             subset(SpeakerType==1) %>%
-#             filter(TimeMS_adjusted==201) %>%
-#             count(Participant)
-#         )
-# 
-#         stop(e)
-# 
-#     }
-# 
-# )
-# 
-#   test_g2 = dat %>% # t-test for L2 group
-#     subset(Determiner == "Possessive") %>% group_by(TimeMS_adjusted) %>%
-#     dplyr::summarise(t = summary(lmer(FixP ~ AOI + (1|Participant)))$coefficients["AOITarget", "t value"])
-# 
-#   # return a TRUE/FALSE vector of significant positive t-scores
-#   # (positive means more looks to the target than unrelated)
-#   t_g1 = test_g1$t > 1.96
-#   t_g2 = test_g2$t > 1.96
-#   
-#   # create empty vectors to store onsets
-#   onset_g1 = onset_g2 = c()
-#   
-#   # find the index of the earliest run of sequential TRUEs; threshold is Nbins
-#   for (i in 1:(length(t_g2)-Nbins)) {
-#     onset_g1[i] = sum(t_g1[i:(i+Nbins-1)]) == Nbins
-#     onset_g2[i] = sum(t_g2[i:(i+Nbins-1)]) == Nbins
-#   }
-#   
-#   # find the difference between onsets
-#   delta_g1g2 = which(onset_g2)[1] - which(onset_g1)[1]
-#   
-#   # print 
-#   # note: the bootstrap returns the indices of the respective timepoints, not absolute times. 
-#   # The annotations to the right of each index (e.g. t[,1]) indicate where in the boot object the bootstrapped onset distributions can be found.
-#   c(delta_g1g2,         # onset difference L1 vs. L2 t[,1]
-#     which(onset_g1)[1], # onset bin for looks to target L1 t[,2]
-#     which(onset_g2)[1])  # onset bin for looks to target L2 t[,3]
-# }
-
 ```
 
 ### Run the new bootstrap function - returns "boundary (singular) fit"
@@ -1304,6 +1227,74 @@ save(bootres_determiner_lmer_hss, file="NEW.DPA_results.lmer.hss.rds")
 ```
 :::
 ::::
+
+::: {style="color:yellow;"}
+### Aug 18 edit - DPA #3-6
+
+```{r}
+boot_tc_lmer <- function(original_data, resample_indices) {
+
+  dat <- original_data[resample_indices, ]
+
+  # statistical test at each timepoint
+  test <- dat %>%
+    group_by(TimeMS_adjusted) %>%
+    dplyr::summarise(
+      t = summary(
+        lmer(
+          FixP ~ AOI + (1 | Participant)
+        )
+      )$coefficients["AOITarget", "t value"]
+    )
+
+  # TRUE when Target > Competitor significantly
+  t_sig <- test$t > 1.96
+
+  # empty vector for possible divergence onsets
+  onset <- c()
+
+  # find earliest run of Nbins significant bins
+  for (i in 1:(length(t_sig) - Nbins)) {
+    onset[i] <- sum(t_sig[i:(i + Nbins - 1)]) == Nbins
+  }
+
+  # return divergence onset
+  which(onset)[1]
+}
+```
+
+#### Run the function on the four datasets
+
+```{r}
+bootres_asi_def <- boot::boot(
+  data = div.dat.asi.def,
+  statistic = boot_tc_lmer,
+  strata = div.dat.asi.def$StrataVars,
+  R = Niter
+)
+
+bootres_asi_pos <- boot::boot(
+  data = div.dat.asi.pos,
+  statistic = boot_tc_lmer,
+  strata = div.dat.asi.pos$StrataVars,
+  R = Niter
+)
+
+bootres_hss_def <- boot::boot(
+  data = div.dat.hss.def,
+  statistic = boot_tc_lmer,
+  strata = div.dat.hss.def$StrataVars,
+  R = Niter
+)
+
+bootres_hss_pos <- boot::boot(
+  data = div.dat.hss.pos,
+  statistic = boot_tc_lmer,
+  strata = div.dat.hss.pos$StrataVars,
+  R = Niter
+)
+```
+:::
 
 ### 4.2.2 Run the lmer bootstrap on the two subsets by determiner type
 
