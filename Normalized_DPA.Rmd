@@ -53,14 +53,23 @@ Niter = 100L
 
 ## 1.2. Read the time-course output data of the eye-tracker from file
 
+::: {style="color:yellow;"}
+### Aug 18 edit - add 200ms to start and end of windows
+
 ```{r}
 fix.dat = read_delim("data-2025-03-12/df_cleaned.csv", delim=',')
 fix.dat = fix.dat %>% mutate_at(vars(Timeline), as.factor)
 # all the trackloss bins have been removed - in any given row, there is a fixation in one of the 3 AreaFixated 
 
+# Aug 18 edit - add 200ms to start and end of windows
+fix.dat <- fix.dat %>% mutate(ArticleOnset_adjusted = ArticleOnset_adjusted + 200,
+                              NounOnset_adjusted = NounOnset_adjusted + 200,
+                              EndingOffset_adjusted = EndingOffset_adjusted + 200)
+
 summary(fix.dat)
 head(fix.dat)
 ```
+:::
 
 ## 1.3. Fill in the missing time points and add a trackloss column
 

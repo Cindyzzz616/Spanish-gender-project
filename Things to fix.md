@@ -9,7 +9,7 @@ def vs target fixations for pos
 
 2.  HSS, alt ONLY - target fixations for def vs target fixations for pos
 
--\> getting a lot of "boundary (singular) fit: see help('isSingular')"
+-> getting a lot of "boundary (singular) fit: see help('isSingular')"
 
 3.  ASI, alt AND nonalt - def only, target vs competitor
 4.  HSS, alt ONLY - def only, target vs competitor
